@@ -7,7 +7,7 @@
     "cli": "tsx src/main.ts",
     "test": "vitest",
     "repomix": "pnpx repomix --ignore 'docs/**/*.md'",
-    "publish": "npm run build && node dist/main.js publish"
+    "publish": "pnpm run build && node dist/main.js publish"
   },
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
