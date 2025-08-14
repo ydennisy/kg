@@ -1,0 +1,6 @@
+.env
+node_modules
+repomix-output.xml
+dist
+public
+data

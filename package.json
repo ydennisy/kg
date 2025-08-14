@@ -1,0 +1,24 @@
+{
+  "name": "kg",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "cli": "tsx src/main.ts",
+    "test": "vitest",
+    "repomix": "pnpx repomix --ignore 'docs/**/*.md'",
+    "publish": "npm run build && node dist/main.js publish"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@types/node": "24.2.1",
+    "tsx": "4.20.3",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "7.8.2",
+    "ajv": "8.17.1",
+    "commander": "14.0.0"
+  }
+}
