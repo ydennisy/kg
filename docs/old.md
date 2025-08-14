@@ -1,55 +1,85 @@
-- check out bartholemew cli to create posts.
-- check out their pages abstraction
-  https://github.com/fermyon/bartholomew/blob/main/src/content.rs
+# Knowledge Graph (KG) - Research & Ideas
 
-[Awesome CLI Apps](https://github.com/agarrharr/awesome-cli-apps#note-taking-and-lists) -
-the idea being here is that to make an MVP it should be a CLI app.
+## Project Vision & Goals
 
-CLI Apps:
+### Core Vision
 
-- https://taskell.app/
-- https://taskwarrior.org/
-- https://github.com/IonicaBizau/idea
-- https://github.com/simeg/eureka
-- https://github.com/darrikonn/td-cli
-- https://github.com/klaussinani/taskbook
-- https://github.com/dnote/dnote
+KG is designed for personal knowledge management and shared knowledge of the
+crowds. The architecture follows a progression: Local app → Networked →
+Protocol.
 
-Features
+### Development Philosophy
 
-- search
-- save to own repo
-- setup to save to specific location (file, git, dropbox...)
-- train ML to answer questions from own KG
-- annotate
-- make comments, notes public to show trending topics (like HN)
+- Start with CLI app for MVP - easier and more defined approach
+- Interface focused on saving articles initially
+- Later expand to questioning/searching your own knowledge graph
+- Consider git-like append-only data structure for knowledge accumulation
 
-Seems easier as is much more defined.
+## CLI Tools Research & Inspiration
 
-The interface could be more a case of saving articles.
+### Reference Collections
 
-Later being able to question/search your own KG.
+- [Awesome CLI Apps - Note Taking](https://github.com/agarrharr/awesome-cli-apps#note-taking-and-lists) -
+  Primary research source for CLI app patterns
 
-How does social work?
+### CLI Applications to Study
 
-Arxiv API Wrapper https://github.com/lukasschwab/arxiv.py
+- [Taskell](https://taskell.app/) - Kanban board CLI
+- [Taskwarrior](https://taskwarrior.org/) - Task management
+- [Idea](https://github.com/IonicaBizau/idea) - Lightweight idea management
+- [Eureka](https://github.com/simeg/eureka) - Store and organize ideas
+- [TD-CLI](https://github.com/darrikonn/td-cli) - Todo manager
+- [Taskbook](https://github.com/klaussinani/taskbook) - Task and note management
+- [Dnote](https://github.com/dnote/dnote) - Command line notebook
 
-Styling https://github.com/alxshelepenok/gatsby-starter-lumen
+## Technical References & Frameworks
 
----
+### Content Management Patterns
 
-KG The vision is for personal knowledge management and shared knowledge of the
-crowds. Local app, networked and then protocol.
+- **Bartholomew CLI** - Study their post creation approach
+  - [Pages Abstraction](https://github.com/fermyon/bartholomew/blob/main/src/content.rs) -
+    Content structure implementation
 
----
+### Styling & UI References
 
-Hackernews - We can store the chat and link as separate links
+- [Gatsby Lumen Starter](https://github.com/alxshelepenok/gatsby-starter-lumen) -
+  Clean blog styling inspiration
 
----
+### External APIs & Integrations
 
-Yagni search
+- [Arxiv API Wrapper](https://github.com/lukasschwab/arxiv.py) - Academic paper
+  integration
 
----
+## Feature Ideas & Roadmap
 
-Could KG be like git with some append only data structure. So you keep adding to
-your knowledge
+### Core Features
+
+- **Search** - Full-text search across knowledge base
+- **Multiple Storage Options** - File system, Git, Dropbox integration
+- **Annotations** - Add context and notes to saved content
+- **Repository Saving** - Save to personal repositories
+
+### Advanced Features
+
+- **ML Integration** - Train models to answer questions from personal KG
+- **Social Features** - Public comments/notes to surface trending topics
+  (HN-style)
+- **Content Separation** - Store discussions and links as separate entities
+  (e.g., HN comments + links)
+
+### Search Strategy
+
+- **YAGNI Approach** - Start simple, add complexity as needed
+
+## Architecture Concepts
+
+### Data Structure Ideas
+
+- **Git-like Model** - Append-only structure for continuous knowledge building
+- **Separation of Concerns** - Treat different content types (links,
+  discussions, notes) as distinct entities
+
+### Social Integration Questions
+
+- How does social functionality integrate with personal knowledge management?
+- Public vs private knowledge sharing mechanisms
