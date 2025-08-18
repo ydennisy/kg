@@ -1,2 +1,6 @@
+packages:
+  - v1
+  - v2
+
 onlyBuiltDependencies:
   - esbuild

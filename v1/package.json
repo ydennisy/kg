@@ -1,13 +1,14 @@
 {
-  "name": "kg",
+  "name": "@kg/v1",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "cli": "tsx src/main.ts",
     "test": "vitest",
-    "repomix": "pnpx repomix --ignore 'docs/**/*.md'",
-    "build:site": "pnpm run build && node dist/main.js publish"
+    "repomix": "pnpx repomix --ignore 'docs/**/*.md,LICENSE,pnpm-lock.yaml'",
+    "site:build": "pnpm run build && node dist/main.js publish",
+    "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes"
   },
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
@@ -16,6 +17,7 @@
     "commander": "14.0.0"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "1.48.4",
     "@types/node": "24.2.1",
     "tsx": "4.20.4",
     "typescript": "5.9.2",
