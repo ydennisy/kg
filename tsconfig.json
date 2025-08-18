@@ -35,8 +35,7 @@
 
 		/* Project Layout */
 		"types": ["node", "vitest"],      /* Include Node + Vitest globals for tests. */
-		"incremental": true,               /* Speeds up subsequent builds (creates tsbuildinfo). */
-		"tsBuildInfoFile": ".tsbuildinfo"
+		"incremental": false              /* Speeds up subsequent builds (creates .tsbuildinfo). */
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["dist", "node_modules"]
