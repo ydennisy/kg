@@ -10,15 +10,15 @@
     "build:site": "pnpm run build && node dist/main.js publish"
   },
   "packageManager": "pnpm@10.14.0",
-  "devDependencies": {
-    "@types/node": "24.2.1",
-    "tsx": "4.20.3",
-    "typescript": "5.9.2",
-    "vitest": "3.2.4"
-  },
   "dependencies": {
-    "@inquirer/prompts": "7.8.2",
+    "@inquirer/prompts": "7.8.3",
     "ajv": "8.17.1",
     "commander": "14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.2.1",
+    "tsx": "4.20.4",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
   }
 }
