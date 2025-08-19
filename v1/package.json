@@ -6,7 +6,7 @@
     "build": "tsc",
     "cli": "tsx src/main.ts",
     "test": "vitest",
-    "repomix": "pnpx repomix --ignore 'docs/**/*.md,LICENSE,pnpm-lock.yaml'",
+    "repomix": "pnpx repomix --ignore 'public/**/*,docs/**/*.md,LICENSE,pnpm-lock.yaml'",
     "site:build": "pnpm run build && node dist/main.js publish",
     "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes",
     "db:reset": "rm -f local.db && dotenvx run -- drizzle-kit push"
