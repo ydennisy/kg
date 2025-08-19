@@ -20,10 +20,7 @@ export class CLI {
   }
 
   private setupCommands(): void {
-    this.program
-      .name('kg')
-      .description('Knowledge Graph CLI')
-      .version('0.0.1');
+    this.program.name('kg').description('Knowledge Graph CLI').version('0.0.1');
 
     this.program
       .command('create')
@@ -46,10 +43,10 @@ export class CLI {
       const nodeType = await select({
         message: 'What type of node do you want to create?',
         choices: [
+          { name: 'Note', value: 'note' as NodeType },
           { name: 'Link', value: 'link' as NodeType },
+          { name: 'Tag', value: 'tag' as NodeType },
           { name: 'Flashcard', value: 'flashcard' as NodeType },
-          { name: 'Idea', value: 'idea' as NodeType },
-          { name: 'Atom', value: 'atom' as NodeType },
         ],
       });
 
@@ -61,9 +58,12 @@ export class CLI {
         message: 'Tags (optional, comma-separated):',
         default: '',
       });
-      
-      const tags = tagsInput.trim() 
-        ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+
+      const tags = tagsInput.trim()
+        ? tagsInput
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0)
         : [];
 
       // Step 4: Ask if node should be public
@@ -92,44 +92,51 @@ export class CLI {
     }
   }
 
-  private async collectNodeData(nodeType: NodeType): Promise<Record<string, unknown>> {
+  private async collectNodeData(
+    nodeType: NodeType
+  ): Promise<Record<string, unknown>> {
     switch (nodeType) {
+      case 'note':
+        return {
+          content: await input({
+            message: 'Enter note content:',
+            validate: (value: string) =>
+              value.trim().length > 0 || 'Content is required',
+          }),
+        };
+
       case 'link':
         return {
           url: await input({
             message: 'Enter URL:',
-            validate: (value: string) => value.trim().length > 0 || 'URL is required',
+            validate: (value: string) =>
+              value.trim().length > 0 || 'URL is required',
           }),
         };
-      
+
+      case 'tag':
+        return {
+          name: await input({
+            message: 'Enter tag name:',
+            validate: (value: string) =>
+              value.trim().length > 0 || 'Name is required',
+          }),
+        };
+
       case 'flashcard':
         return {
           front: await input({
-            message: 'Enter front text:',
-            validate: (value: string) => value.trim().length > 0 || 'Front text is required',
+            message: 'Enter flashcard front text:',
+            validate: (value: string) =>
+              value.trim().length > 0 || 'Front text is required',
           }),
           back: await input({
-            message: 'Enter back text:',
-            validate: (value: string) => value.trim().length > 0 || 'Back text is required',
+            message: 'Enter flashcard back text:',
+            validate: (value: string) =>
+              value.trim().length > 0 || 'Back text is required',
           }),
         };
-      
-      case 'idea':
-        return {
-          content: await input({
-            message: 'Enter idea content:',
-            validate: (value: string) => value.trim().length > 0 || 'Content is required',
-          }),
-        };
-      
-      case 'atom':
-        return {
-          content: await input({
-            message: 'Enter atom content:',
-            validate: (value: string) => value.trim().length > 0 || 'Content is required',
-          }),
-        };
-      
+
       default:
         throw new Error(`Unknown node type: ${nodeType}`);
     }
@@ -138,11 +145,13 @@ export class CLI {
   private async publishSite(): Promise<void> {
     try {
       console.log('🔄 Generating static site...');
-      
+
       const result = await this.publishSiteUseCase.execute();
-      
+
       if (result.ok) {
-        console.log(`✅ Successfully published ${result.filesGenerated} files to ${result.outputDir}`);
+        console.log(
+          `✅ Successfully published ${result.filesGenerated} files to ${result.outputDir}`
+        );
       } else {
         console.error(`❌ Error publishing site: ${result.error}`);
         process.exit(1);

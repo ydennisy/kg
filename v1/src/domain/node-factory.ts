@@ -17,9 +17,9 @@ class NodeFactory {
 
   public createNode<T extends Record<string, any>>(
     type: NodeType,
-    data: T,
-    tags: Array<string> = [],
-    isPublic: boolean = false
+    title: string,
+    isPublic: boolean = false,
+    data: T
   ): Node<T> {
     const schema = this.schemas.get(type);
     if (!schema) {
@@ -37,17 +37,17 @@ class NodeFactory {
     const now = new Date();
     const createdAt = now;
     const updatedAt = now;
-    return new Node(id, type, createdAt, updatedAt, tags, isPublic, data);
+    return new Node(id, type, title, isPublic, createdAt, updatedAt, data);
   }
 
   public hydrateNode<T extends Record<string, any>>(
     id: string,
     type: NodeType,
-    data: T,
-    tags: string[],
+    title: string,
+    isPublic: boolean = false,
     createdAt: Date,
     updatedAt: Date,
-    isPublic: boolean = false
+    data: T
   ): Node<T> {
     const schema = this.schemas.get(type);
     if (!schema) {
@@ -62,7 +62,7 @@ class NodeFactory {
       );
     }
 
-    return new Node(id, type, createdAt, updatedAt, tags, isPublic, data);
+    return new Node(id, type, title, isPublic, createdAt, updatedAt, data);
   }
 }
 

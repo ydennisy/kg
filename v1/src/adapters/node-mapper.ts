@@ -1,41 +1,32 @@
 import { NodeFactory } from '../domain/node-factory.js';
 import type { Node, NodeType } from '../domain/node.js';
-
-interface NodePersistenceModel {
-  id: string;
-  type: string;
-  createdAt: string;
-  updatedAt: string;
-  tags: string[];
-  isPublic: boolean;
-  data: Record<string, any>;
-}
+import type { NodeRecord } from '../external/database/schemas.js';
 
 class NodeMapper {
   constructor(private nodeFactory: NodeFactory) {}
 
-  public toDomain(model: NodePersistenceModel): Node {
+  public toDomain(record: NodeRecord): Node {
     const node = this.nodeFactory.hydrateNode(
-      model.id,
-      model.type as NodeType, // TODO: check this invariant
-      model.data,
-      model.tags,
-      new Date(model.createdAt),
-      new Date(model.updatedAt),
-      model.isPublic
+      record.id,
+      record.type as NodeType, // TODO: check this invariant
+      record.title,
+      record.isPublic,
+      new Date(record.createdAt),
+      new Date(record.updatedAt),
+      record.data
     );
 
     return node;
   }
 
-  public toPersistence(node: Node): NodePersistenceModel {
+  public toPersistence(node: Node): NodeRecord {
     return {
       id: node.id,
       type: node.type,
+      title: node.title,
+      isPublic: node.isPublic,
       createdAt: node.createdAt.toISOString(),
       updatedAt: node.updatedAt.toISOString(),
-      tags: node.tags,
-      isPublic: node.isPublic,
       data: node.data,
     };
   }

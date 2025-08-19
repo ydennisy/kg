@@ -1,6 +1,8 @@
 import { AjvValidator } from './external/validation/ajv-validator.js';
 import { NodeFactory } from './domain/node-factory.js';
 import { FileNodeRepository } from './external/repositories/file-node-repository.js';
+import { createDatabaseClient } from './external/database/client.js';
+import { SqlNodeRepository } from './external/repositories/sql-node-repository.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
@@ -16,7 +18,9 @@ class Application {
     const factory = new NodeFactory(validator);
     this.initSchemas(factory);
     const mapper = new NodeMapper(factory);
-    const repository = new FileNodeRepository('./data', mapper);
+    // const repository = new FileNodeRepository('./data', mapper);
+    const db = createDatabaseClient();
+    const repository = new SqlNodeRepository(db, mapper);
     const htmlGenerator = new HTMLGenerator();
     const createNode = new CreateNodeUseCase(factory, repository);
     const publishSite = new PublishSiteUseCase(
@@ -32,10 +36,24 @@ class Application {
   }
 
   private initSchemas(factory: NodeFactory) {
+    const noteSchema = {
+      type: 'object',
+      properties: { content: { type: 'string' } },
+      required: ['content'],
+      additionalProperties: false,
+    } satisfies JSONSchema;
+
     const linkSchema = {
       type: 'object',
       properties: { url: { type: 'string' } },
       required: ['url'],
+      additionalProperties: false,
+    } satisfies JSONSchema;
+
+    const tagSchema = {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
       additionalProperties: false,
     } satisfies JSONSchema;
 
@@ -46,24 +64,10 @@ class Application {
       additionalProperties: false,
     } satisfies JSONSchema;
 
-    const ideaSchema = {
-      type: 'object',
-      properties: { content: { type: 'string' } },
-      required: ['content'],
-      additionalProperties: false,
-    } satisfies JSONSchema;
-
-    const atomSchema = {
-      type: 'object',
-      properties: { content: { type: 'string' } },
-      required: ['content'],
-      additionalProperties: false,
-    } satisfies JSONSchema;
-
+    factory.registerSchema('note', noteSchema);
     factory.registerSchema('link', linkSchema);
+    factory.registerSchema('tag', tagSchema);
     factory.registerSchema('flashcard', flashcardSchema);
-    factory.registerSchema('idea', ideaSchema);
-    factory.registerSchema('atom', atomSchema);
   }
 }
 

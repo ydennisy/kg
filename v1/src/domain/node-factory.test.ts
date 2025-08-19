@@ -18,7 +18,14 @@ describe('NodeFactory', () => {
     factory.registerSchema('link', linkSchema);
 
     const URL = 'https://example.com';
-    const linkNode = factory.createNode('link', { url: URL });
+    const linkNode = factory.createNode(
+      'link',
+      'Example Website Title',
+      false,
+      {
+        url: URL,
+      }
+    );
 
     expect(linkNode.id).toBeDefined();
     expect(linkNode.id.length).toBeGreaterThan(0);
@@ -41,7 +48,9 @@ describe('NodeFactory', () => {
     factory.registerSchema('link', linkSchema);
 
     const URL = 'https://example.com';
-    const linkNode = factory.createNode('link', { url: URL }, [], true);
+    const linkNode = factory.createNode('link', 'Example Website Title', true, {
+      url: URL,
+    });
 
     expect(linkNode.id).toBeDefined();
     expect(linkNode.data.url).toBe(URL);
