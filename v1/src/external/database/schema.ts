@@ -10,7 +10,28 @@ const nodesTable = sqliteTable('nodes', {
   data: text('data', { mode: 'json' }).notNull().$type<Record<string, any>>(),
 });
 
-type NodeRecord = typeof nodesTable.$inferSelect;
+const edgesTable = sqliteTable('edges', {
+  id: text('id').primaryKey(),
+  sourceId: text('source_id')
+    .notNull()
+    .references(() => nodesTable.id),
+  targetId: text('target_id')
+    .notNull()
+    .references(() => nodesTable.id),
+  type: text('type', {
+    enum: [
+      'references',
+      'contains',
+      'tagged_with',
+      'similar_to',
+      'responds_to',
+    ],
+  }),
+  createdAt: text('created_at').notNull(),
+});
 
-export { nodesTable };
-export type { NodeRecord };
+type NodeRecord = typeof nodesTable.$inferSelect;
+type EdgeRecord = typeof edgesTable.$inferSelect;
+
+export { nodesTable, edgesTable };
+export type { NodeRecord, EdgeRecord };
