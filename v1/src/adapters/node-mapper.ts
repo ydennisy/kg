@@ -1,6 +1,6 @@
 import { NodeFactory } from '../domain/node-factory.js';
 import type { Node, NodeType } from '../domain/node.js';
-import type { NodeRecord } from '../external/database/schemas.js';
+import type { NodeRecord } from '../external/database/schema.js';
 
 class NodeMapper {
   constructor(private nodeFactory: NodeFactory) {}

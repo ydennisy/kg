@@ -29,8 +29,8 @@ src/
 
 interface CreateNodeRequest {
   type: NodeType;
+  title?: string;
   data: Record<string, any>;
-  tags?: string[];
 }
 
 interface CreateNodeResponse {
@@ -53,8 +53,9 @@ class CreateNodeUseCase {
     try {
       const node = this.factory.createNode(
         request.type,
-        request.data,
-        request.tags
+        request.title || 'Untitled',
+        false, // isPublic
+        request.data
       );
       await this.repository.save(node);
       return { success: true, nodeId: node.id };
@@ -82,7 +83,6 @@ class CommanderCli {
       const response = await this.createNodeUseCase.execute({
         type,
         data,
-        tags: [],
       });
 
       if (response.success) {
@@ -264,7 +264,7 @@ export class Node<T extends Record<string, any> = {}> {
     json: any,
     validator: (type: NodeType, data: any) => void
   ): Node<T> {
-    const { id, type, createdAt, updatedAt, tags, ...data } = json;
+    const { id, type, title, createdAt, updatedAt, isPublic, data } = json;
 
     // Validate through injected validator function
     validator(type, data);
@@ -272,9 +272,10 @@ export class Node<T extends Record<string, any> = {}> {
     return new Node(
       id,
       type,
+      title,
+      isPublic,
       new Date(createdAt),
       new Date(updatedAt),
-      tags,
       data as T
     );
   }
@@ -283,9 +284,10 @@ export class Node<T extends Record<string, any> = {}> {
     return {
       id: this.id,
       type: this.type,
+      title: this.title,
+      isPublic: this.isPublic,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
-      tags: this.tags,
       data: this.data,
     };
   }
@@ -340,4 +342,42 @@ export class SchemaRegistry {
     return new Map(this.schemas);
   }
 }
+```
+
+## Tag Architecture
+
+**Important: Tags are now implemented as separate nodes, not as metadata properties.**
+
+### Tag Node Type
+
+Tags are created as nodes with type `'tag'` and the following data structure:
+```typescript
+interface TagData {
+  name: string;
+}
+```
+
+### Tag Relationships
+
+Tag relationships to other nodes should be implemented through:
+1. **Separate relationship entities** (future enhancement)
+2. **Query-based discovery** by searching for tag nodes and then finding nodes that reference them
+3. **Link nodes** that connect content nodes to tag nodes
+
+### Migration from Tag Metadata
+
+Previous architecture stored tags as string arrays on nodes:
+```typescript
+// OLD - removed
+interface Node {
+  tags: string[];
+}
+```
+
+New architecture creates separate tag nodes:
+```typescript
+// Create a tag node
+const tagNode = factory.createNode('tag', 'JavaScript', false, { name: 'JavaScript' });
+
+// Relationships are handled separately through links or queries
 ```

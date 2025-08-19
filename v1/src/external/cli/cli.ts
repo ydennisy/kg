@@ -50,21 +50,11 @@ export class CLI {
         ],
       });
 
-      // Step 2: Collect data based on node type
+      // Step 2: Collect title
+      const title = await this.collectTitle(nodeType);
+
+      // Step 3: Collect data based on node type
       const data = await this.collectNodeData(nodeType);
-
-      // Step 3: Collect tags
-      const tagsInput = await input({
-        message: 'Tags (optional, comma-separated):',
-        default: '',
-      });
-
-      const tags = tagsInput.trim()
-        ? tagsInput
-            .split(',')
-            .map((tag) => tag.trim())
-            .filter((tag) => tag.length > 0)
-        : [];
 
       // Step 4: Ask if node should be public
       const isPublic = await confirm({
@@ -75,8 +65,8 @@ export class CLI {
       // Step 5: Create the node
       const result = await this.createNodeUseCase.execute({
         type: nodeType,
+        title,
         data,
-        tags,
         isPublic,
       });
 
@@ -89,6 +79,21 @@ export class CLI {
     } catch (error) {
       console.error('❌ Unexpected error:', error);
       process.exit(1);
+    }
+  }
+
+  private async collectTitle(nodeType: NodeType): Promise<string> {
+    if (nodeType === 'note') {
+      return await input({
+        message: 'Enter note title:',
+        validate: (value: string) =>
+          value.trim().length > 0 || 'Title is required for notes',
+      });
+    } else {
+      return await input({
+        message: `Enter ${nodeType} title (optional):`,
+        default: '',
+      });
     }
   }
 

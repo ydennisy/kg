@@ -1,6 +1,6 @@
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import * as schema from './schemas.js';
+import * as schema from './schema.js';
 
 // TODO: pass in from config
 const createDatabaseClient = () => {

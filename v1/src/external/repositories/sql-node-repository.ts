@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
-import { nodesTable } from '../database/schemas.js';
+import { nodesTable } from '../database/schema.js';
 import type { DatabaseClient } from '../database/client.js';
 import type { NodeRepository } from '../../application/ports/node-repository.js';
 import type { Node } from '../../domain/node.js';
@@ -23,6 +23,11 @@ export class SqlNodeRepository implements NodeRepository {
     });
   }
 
+  async findAll(): Promise<Node[]> {
+    const nodes = await this.db.select().from(nodesTable);
+    return nodes.map((node) => this.mapper.toDomain(node));
+  }
+
   async findById(id: string): Promise<Node | null> {
     const [node] = await this.db
       .select()
@@ -33,10 +38,5 @@ export class SqlNodeRepository implements NodeRepository {
     if (!node) return null; // should be undefined?
 
     return this.mapper.toDomain(node);
-  }
-
-  async list(): Promise<Node[]> {
-    const nodes = await this.db.select().from(nodesTable);
-    return nodes.map((node) => this.mapper.toDomain(node));
   }
 }

@@ -1,8 +1,4 @@
-import { sql, relations } from 'drizzle-orm';
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-
-// const createdAt = text('created_at').default(sql`(CURRENT_TIMESTAMP)`);
-// const updatedAt = text('updated_at').default(sql`(CURRENT_TIMESTAMP)`);
 
 const nodesTable = sqliteTable('nodes', {
   id: text('id').primaryKey(),
@@ -15,7 +11,6 @@ const nodesTable = sqliteTable('nodes', {
 });
 
 type NodeRecord = typeof nodesTable.$inferSelect;
-// type NodeCreateRecord = typeof nodesTable.$inferInsert;
 
 export { nodesTable };
 export type { NodeRecord };

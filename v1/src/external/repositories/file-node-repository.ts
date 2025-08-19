@@ -15,15 +15,7 @@ class FileNodeRepository implements NodeRepository {
     const persistenceModel = this.mapper.toPersistence(node);
     await fs.writeFile(filePath, JSON.stringify(persistenceModel, null, 2));
   }
-
-  async findById(id: string): Promise<Node | null> {
-    const filePath = path.join(this.dataDir, `${id}.json`);
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    const json = JSON.parse(fileContent);
-    return this.mapper.toDomain(json);
-  }
-
-  async list(): Promise<Node[]> {
+  async findAll(): Promise<Node[]> {
     const files = await fs.readdir(this.dataDir);
     const nodes: Node[] = [];
     for (const file of files) {
@@ -33,6 +25,13 @@ class FileNodeRepository implements NodeRepository {
       nodes.push(this.mapper.toDomain(json));
     }
     return nodes;
+  }
+
+  async findById(id: string): Promise<Node | null> {
+    const filePath = path.join(this.dataDir, `${id}.json`);
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const json = JSON.parse(fileContent);
+    return this.mapper.toDomain(json);
   }
 }
 

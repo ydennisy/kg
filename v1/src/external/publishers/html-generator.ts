@@ -136,20 +136,6 @@ export class HTMLGenerator implements SiteGenerator {
             <h1>${this.getNodeTitle(node)}</h1>
             
             ${this.renderNodeContent(node)}
-            
-            ${
-              node.tags.length > 0
-                ? `
-            <div class="tags">
-                ${node.tags
-                  .map(
-                    (tag) => `<span class="tag">#${this.escapeHtml(tag)}</span>`
-                  )
-                  .join('')}
-            </div>
-            `
-                : ''
-            }
         </article>
         
         ${this.renderRelatedNodes(node, allNodes)}
@@ -195,16 +181,6 @@ export class HTMLGenerator implements SiteGenerator {
         </div>`;
         }
         break;
-
-      case 'idea':
-      case 'atom':
-        if (this.isContentData(node.data)) {
-          return `
-        <div class="content">
-            ${this.escapeHtml(node.data.content)}
-        </div>`;
-        }
-        break;
     }
 
     // Fallback for invalid data
@@ -212,30 +188,8 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private renderRelatedNodes(node: Node, allNodes: Node[]): string {
-    // Find nodes with overlapping tags
-    const related = allNodes
-      .filter((n) => n.id !== node.id)
-      .filter((n) => n.tags.some((t) => node.tags.includes(t)))
-      .slice(0, 5);
-
-    if (related.length === 0) return '';
-
-    return `
-    <aside class="related">
-        <h2>Related Nodes</h2>
-        <ul>
-            ${related
-              .map(
-                (n) => `
-            <li>
-                <a href="${n.id}.html">${this.getNodeTitle(n)}</a>
-                <span class="node-type-badge">${n.type}</span>
-            </li>
-            `
-              )
-              .join('')}
-        </ul>
-    </aside>`;
+    // TODO: Implement relationship discovery via tag nodes when tag relationships are implemented
+    return '';
   }
 
   private getNodeTitle(node: Node): string {
@@ -254,12 +208,6 @@ export class HTMLGenerator implements SiteGenerator {
           return node.data.front.slice(0, 50);
         }
         break;
-      case 'idea':
-      case 'atom':
-        if (this.isContentData(node.data)) {
-          return node.data.content.slice(0, 50);
-        }
-        break;
     }
     return node.id.slice(0, 8);
   }
@@ -274,12 +222,6 @@ export class HTMLGenerator implements SiteGenerator {
       case 'flashcard':
         if (this.isFlashcardData(node.data)) {
           return `Q: ${node.data.front.slice(0, 100)}...`;
-        }
-        break;
-      case 'idea':
-      case 'atom':
-        if (this.isContentData(node.data)) {
-          return node.data.content.slice(0, 150) + '...';
         }
         break;
     }
@@ -359,20 +301,6 @@ h2 { font-size: 1.8rem; margin: 2rem 0 1rem; }
   margin-bottom: 0.5rem;
 }
 
-.tags {
-  margin-top: 2rem;
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.tag {
-  padding: 0.25rem 0.75rem;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 0.9rem;
-}
 
 .flashcard-content {
   display: grid;
