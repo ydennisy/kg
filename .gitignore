@@ -4,4 +4,5 @@ repomix-output.xml
 dist
 public
 data
+.kg
 .tsbuildinfo

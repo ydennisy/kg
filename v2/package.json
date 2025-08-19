@@ -3,12 +3,18 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "dev": "tsx src/main.ts",
+    "search": "tsx src/search.ts",
+    "ask": "tsx src/ask.ts",
     "build": "tsc",
     "test": "vitest",
-    "repomix": "pnpx repomix --ignore 'docs/**/*.md,LICENSE,pnpm-lock.yaml'"
+    "repomix": "pnpx repomix --ignore 'notes/**/*.md,LICENSE,pnpm-lock.yaml'"
   },
   "packageManager": "pnpm@10.14.0",
-  "dependencies": {},
+  "dependencies": {
+    "ollama": "0.5.17",
+    "yaml": "^2.8.1"
+  },
   "devDependencies": {
     "@types/node": "24.2.1",
     "tsx": "4.20.4",
