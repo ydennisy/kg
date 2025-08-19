@@ -9,14 +9,14 @@ class Edge {
   readonly id: string;
   readonly sourceId: string;
   readonly targetId: string;
-  readonly type?: EdgeType;
+  readonly type: EdgeType | undefined;
   readonly createdAt: Date;
 
   constructor(
     id: string,
     sourceId: string,
     targetId: string,
-    type: EdgeType,
+    type: EdgeType | undefined,
     createdAt: Date
   ) {
     this.id = id;

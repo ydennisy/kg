@@ -10,7 +10,7 @@ class EdgeMapper {
       record.id,
       record.sourceId,
       record.targetId,
-      record.type as EdgeType,
+      record.type as EdgeType | undefined,
       new Date(record.createdAt)
     );
   }

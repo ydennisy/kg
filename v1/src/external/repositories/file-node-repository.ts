@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { Node, type NodeType } from '../../domain/node.js';
-import type { NodeRepository } from '../../application/ports/node-repository.js';
+import type { NodeRepository, SearchResult } from '../../application/ports/node-repository.js';
 
 class FileNodeRepository implements NodeRepository {
   constructor(private dataDir: string, private mapper: NodeMapper) {
@@ -32,6 +32,21 @@ class FileNodeRepository implements NodeRepository {
     const fileContent = await fs.readFile(filePath, 'utf-8');
     const json = JSON.parse(fileContent);
     return this.mapper.toDomain(json);
+  }
+
+  async searchNodes(query: string): Promise<SearchResult[]> {
+    // Simple file-based search - get all nodes and filter in memory
+    const allNodes = await this.findAll();
+    const results = allNodes.filter(node => {
+      const searchText = `${node.id} ${node.title} ${JSON.stringify(node.data)}`.toLowerCase();
+      return searchText.includes(query.toLowerCase());
+    });
+    
+    // Return with mock scores since file-based search doesn't have relevance scoring
+    return results.map(node => ({
+      node,
+      score: 1.0, // Mock score for file-based search
+    }));
   }
 }
 

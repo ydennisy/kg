@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Edge, type EdgeType } from './edge.js';
 
 class EdgeFactory {
-  createEdge(sourceId: string, targetId: string, type: EdgeType): Edge {
+  createEdge(sourceId: string, targetId: string, type?: EdgeType): Edge {
     if (sourceId === targetId) {
       throw new Error('Cannot create self-referencing edge');
     }
@@ -16,7 +16,7 @@ class EdgeFactory {
     id: string,
     sourceId: string,
     targetId: string,
-    type: EdgeType,
+    type: EdgeType | undefined,
     createdAt: Date
   ): Edge {
     return new Edge(id, sourceId, targetId, type, createdAt);

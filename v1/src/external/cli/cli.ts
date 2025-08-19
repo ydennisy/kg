@@ -1,7 +1,11 @@
 import { Command } from 'commander';
 import { select, input, confirm } from '@inquirer/prompts';
+import autocomplete from 'inquirer-autocomplete-standalone';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
+import type { NodeRepository } from '../../application/ports/node-repository.js';
+import type { EdgeRepository } from '../../application/ports/edge-repository.js';
+import type { EdgeFactory } from '../../domain/edge-factory.js';
 import type { NodeType } from '../../domain/node.js';
 
 export class CLI {
@@ -9,7 +13,10 @@ export class CLI {
 
   constructor(
     private createNodeUseCase: CreateNodeUseCase,
-    private publishSiteUseCase: PublishSiteUseCase
+    private publishSiteUseCase: PublishSiteUseCase,
+    private nodeRepository: NodeRepository,
+    private edgeRepository: EdgeRepository,
+    private edgeFactory: EdgeFactory
   ) {
     this.program = new Command();
     this.setupCommands();
@@ -72,6 +79,16 @@ export class CLI {
 
       if (result.ok) {
         console.log(`✅ Created ${nodeType} node with ID: ${result.node.id}`);
+
+        // Step 6: Ask if user wants to link to existing nodes
+        const shouldLink = await confirm({
+          message: 'Would you like to link this node to existing nodes?',
+          default: false,
+        });
+
+        if (shouldLink) {
+          await this.linkNodesToNewNode(result.node.id);
+        }
       } else {
         console.error(`❌ Error creating node: ${result.error}`);
         process.exit(1);
@@ -165,5 +182,101 @@ export class CLI {
       console.error('❌ Unexpected error:', error);
       process.exit(1);
     }
+  }
+
+  private async linkNodesToNewNode(newNodeId: string): Promise<void> {
+    try {
+      const selectedNodes: string[] = [];
+
+      while (true) {
+        const nodeId = await autocomplete({
+          message:
+            selectedNodes.length === 0
+              ? 'Search for a node to link:'
+              : 'Search for another node to link (or press Enter to finish):',
+          source: async (input?: string) => {
+            if (!input || input.trim().length === 0) {
+              return selectedNodes.length > 0
+                ? [{ name: '✅ Finish linking', value: 'FINISH' }]
+                : [];
+            }
+
+            const results = await this.nodeRepository.searchNodes(input);
+
+            // Filter out the newly created node and already selected nodes
+            const filteredResults = results.filter(
+              ({ node }) =>
+                node.id !== newNodeId && !selectedNodes.includes(node.id)
+            );
+
+            if (filteredResults.length === 0) {
+              return [
+                {
+                  name: 'No matching nodes found',
+                  value: null,
+                  disabled: true,
+                },
+              ];
+            }
+
+            return filteredResults.map(({ node, score }) => {
+              // Get a preview of the data
+              const dataPreview = this.getNodeDataPreview(node);
+
+              return {
+                name: `[${node.type.toUpperCase()}] ${
+                  node.title
+                } - ${dataPreview} (Score: ${score.toFixed(2)})`,
+                value: node.id,
+              };
+            });
+          },
+        });
+
+        if (nodeId === 'FINISH' || nodeId === null || nodeId === undefined) {
+          break;
+        }
+
+        selectedNodes.push(nodeId);
+        console.log(`✅ Added node ${nodeId} to link list`);
+      }
+
+      // Create edges for all selected nodes
+      if (selectedNodes.length > 0) {
+        for (const targetNodeId of selectedNodes) {
+          const edge = this.edgeFactory.createEdge(newNodeId, targetNodeId);
+          await this.edgeRepository.save(edge);
+        }
+        console.log(`✅ Created ${selectedNodes.length} links to the new node`);
+      } else {
+        console.log('No nodes were linked.');
+      }
+    } catch (error) {
+      console.error('❌ Error linking nodes:', error);
+    }
+  }
+
+  private getNodeDataPreview(node: any): string {
+    const data = node.data;
+
+    if (typeof data === 'string') {
+      return data.slice(0, 50) + (data.length > 50 ? '...' : '');
+    }
+
+    if (typeof data === 'object' && data !== null) {
+      // Try common preview fields
+      const previewField = data.content || data.url || data.name || data.front;
+      if (previewField && typeof previewField === 'string') {
+        return (
+          previewField.slice(0, 50) + (previewField.length > 50 ? '...' : '')
+        );
+      }
+
+      // Fallback to JSON representation
+      const jsonStr = JSON.stringify(data);
+      return jsonStr.slice(0, 50) + (jsonStr.length > 50 ? '...' : '');
+    }
+
+    return 'No preview available';
   }
 }

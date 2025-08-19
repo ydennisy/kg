@@ -13,7 +13,7 @@ class PublishSiteUseCase {
   async execute() {
     try {
       // Get all nodes and filter for public ones
-      const allNodes = await this.repository.list();
+      const allNodes = await this.repository.findAll();
       const publicNodes = allNodes.filter((n) => n.isPublic);
 
       // Generate site files

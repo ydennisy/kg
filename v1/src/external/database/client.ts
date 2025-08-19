@@ -2,13 +2,12 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema.js';
 
-// TODO: pass in from config
-const createDatabaseClient = () => {
-  const client = createClient({ url: 'file:local.db' });
+const createDatabaseClient = (url: string) => {
+  const client = createClient({ url });
   return drizzle(client, { schema });
 };
 
-type DatabaseClient = ReturnType<typeof createDatabaseClient>;
+type DatabaseClient = Awaited<ReturnType<typeof createDatabaseClient>>;
 
 export { createDatabaseClient };
 export type { DatabaseClient };

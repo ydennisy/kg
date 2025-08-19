@@ -6,13 +6,11 @@ import type { JSONSchema } from '../../domain/ports/validator.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Node } from '../../domain/node.js';
 
-// Mock repository
 const mockRepository: NodeRepository = {
   save: async (node: Node) => Promise.resolve(),
   findById: async (id: string) => Promise.resolve(null),
   findAll: async () => Promise.resolve([]),
-  // findByType: async (type: string) => Promise.resolve([]),
-  // findPublic: async () => Promise.resolve([]),
+  searchNodes: async (query: string) => Promise.resolve([]),
 };
 
 describe('CreateNodeUseCase', () => {
@@ -34,7 +32,7 @@ describe('CreateNodeUseCase', () => {
     const result = await useCase.execute({
       type: 'note',
       title: 'My Note',
-      data: { content: 'hyee' },
+      data: { content: 'hello world' },
       isPublic: false,
     });
 
@@ -42,7 +40,7 @@ describe('CreateNodeUseCase', () => {
     if (result.ok) {
       expect(result.node.type).toBe('note');
       expect(result.node.title).toBe('My Note');
-      expect(result.node.data.content).toBe('hyee');
+      expect(result.node.data.content).toBe('hello world');
       expect(result.node.isPublic).toBe(false);
     }
   });
