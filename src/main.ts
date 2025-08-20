@@ -6,10 +6,10 @@ import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
-
 import { CLI } from './external/cli/cli.js';
-import type { JSONSchema } from './domain/ports/validator.js';
 import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
+import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
+import type { JSONSchema } from './domain/ports/validator.js';
 
 class Application {
   private cli: CLI;
@@ -29,19 +29,13 @@ class Application {
 
     const createNode = new CreateNodeUseCase(nodeFactory, nodeRepository);
     const linkNodes = new LinkNodesUseCase(nodeRepository);
+    const searchNodes = new SearchNodesUseCase(nodeRepository);
     const publishSite = new PublishSiteUseCase(
       nodeRepository,
       htmlGenerator,
       './public'
     );
-    this.cli = new CLI(
-      createNode,
-      publishSite,
-      linkNodes
-      // nodeRepository,
-      // edgeRepository,
-      // edgeFactory
-    );
+    this.cli = new CLI(createNode, publishSite, linkNodes, searchNodes);
   }
 
   public run(): void {

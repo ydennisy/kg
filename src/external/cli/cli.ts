@@ -4,7 +4,7 @@ import autocomplete from 'inquirer-autocomplete-standalone';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
-import type { NodeRepository } from '../../application/ports/node-repository.js';
+import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { NodeType } from '../../domain/node.js';
 
 export class CLI {
@@ -13,7 +13,8 @@ export class CLI {
   constructor(
     private createNodeUseCase: CreateNodeUseCase,
     private publishSiteUseCase: PublishSiteUseCase,
-    private linkNodesUseCase: LinkNodesUseCase
+    private linkNodesUseCase: LinkNodesUseCase,
+    private searchNodesUseCase: SearchNodesUseCase
   ) {
     this.program = new Command();
     this.setupCommands();
@@ -198,7 +199,21 @@ export class CLI {
                 : [];
             }
 
-            const results = await this.nodeRepository.search(input);
+            const searchResult = await this.searchNodesUseCase.execute({
+              query: input,
+            });
+
+            if (!searchResult.ok) {
+              return [
+                {
+                  name: `Error: ${searchResult.error}`,
+                  value: null,
+                  disabled: true,
+                },
+              ];
+            }
+
+            const results = searchResult.results;
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(
@@ -238,11 +253,19 @@ export class CLI {
         console.log(`✅ Added node ${nodeId} to link list`);
       }
 
-      // Create edges for all selected nodes
+      // Create links for all selected nodes
       if (selectedNodes.length > 0) {
         for (const targetNodeId of selectedNodes) {
-          const edge = this.edgeFactory.createEdge(newNodeId, targetNodeId);
-          await this.edgeRepository.save(edge);
+          const linkResult = await this.linkNodesUseCase.execute({
+            sourceId: newNodeId,
+            targetId: targetNodeId,
+          });
+
+          if (!linkResult.ok) {
+            console.error(
+              `❌ Error linking to node ${targetNodeId}: ${linkResult.error}`
+            );
+          }
         }
         console.log(`✅ Created ${selectedNodes.length} links to the new node`);
       } else {
