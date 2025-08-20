@@ -11,7 +11,8 @@
     "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes",
     "db:reset": "rm -f local.db && dotenvx run -- drizzle-kit push",
     "db:generate": "dotenvx run -- drizzle-kit generate",
-    "db:migrate": "dotenvx run -- drizzle-kit migrate"
+    "db:migrate": "dotenvx run -- drizzle-kit migrate",
+    "db:studio": "dotenvx run -- drizzle-kit studio"
   },
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
@@ -20,10 +21,10 @@
     "ajv": "8.17.1",
     "commander": "14.0.0",
     "drizzle-orm": "0.44.4",
-    "inquirer-autocomplete-standalone": "^0.8.1"
+    "inquirer-autocomplete-standalone": "0.8.1"
   },
   "devDependencies": {
-    "@dotenvx/dotenvx": "1.48.4",
+    "@dotenvx/dotenvx": "1.49.0",
     "@types/node": "24.2.1",
     "drizzle-kit": "0.31.4",
     "tsx": "4.20.4",

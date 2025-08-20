@@ -201,7 +201,7 @@ export class CLI {
                 : [];
             }
 
-            const results = await this.nodeRepository.searchNodes(input);
+            const results = await this.nodeRepository.search(input);
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(

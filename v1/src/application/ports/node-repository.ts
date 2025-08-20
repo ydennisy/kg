@@ -9,9 +9,7 @@ interface NodeRepository {
   save(node: Node): Promise<void>;
   findAll(): Promise<Node[]>;
   findById(id: string): Promise<Node | null>;
-  searchNodes(query: string): Promise<SearchResult[]>;
-  // findByType(type: string): Promise<Node[]>;
-  // findPublic(): Promise<Node[]>;
+  search(query: string): Promise<SearchResult[]>;
 }
 
 export type { NodeRepository, SearchResult };

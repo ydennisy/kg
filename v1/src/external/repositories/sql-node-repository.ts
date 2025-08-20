@@ -2,7 +2,10 @@ import { eq, sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { nodesTable } from '../database/schema.js';
 import type { DatabaseClient } from '../database/client.js';
-import type { NodeRepository, SearchResult } from '../../application/ports/node-repository.js';
+import type {
+  NodeRepository,
+  SearchResult,
+} from '../../application/ports/node-repository.js';
 import type { Node } from '../../domain/node.js';
 
 export class SqlNodeRepository implements NodeRepository {
@@ -40,19 +43,13 @@ export class SqlNodeRepository implements NodeRepository {
     return this.mapper.toDomain(node);
   }
 
-  async searchNodes(query: string): Promise<SearchResult[]> {
+  async search(query: string): Promise<SearchResult[]> {
     if (!query.trim()) {
       return [];
     }
 
-    // Manually sync existing nodes to FTS table (since triggers are missing from migration)
-    const nodes = await this.db.all(sql`SELECT id, title, data FROM nodes`);
-    for (const node of nodes) {
-      await this.db.run(sql`INSERT OR REPLACE INTO nodes_fts(id, title, data) VALUES (${node.id}, ${node.title}, ${node.data})`);
-    }
-
-    // Use FTS5 with BM25 scoring
-    // Lower BM25 scores indicate higher relevance
+    // Use FTS5 with BM25 scoring, a lower
+    // BM25 scores indicates higher relevance
     const results = await this.db.all(sql`
       SELECT DISTINCT
         n.id, n.type, n.title, n.is_public, n.created_at, n.updated_at, n.data,
@@ -62,7 +59,6 @@ export class SqlNodeRepository implements NodeRepository {
       WHERE nodes_fts MATCH ${query}
       ORDER BY bm25(nodes_fts)
     `);
-
 
     return results.map((row: any) => ({
       node: this.mapper.toDomain({
