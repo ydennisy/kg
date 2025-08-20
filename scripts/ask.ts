@@ -1,7 +1,7 @@
 import ollama from 'ollama';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { parseFrontmatter } from './frontmatter.js';
+import { parseFrontmatter } from '../../v2/src/frontmatter.js';
 
 // Get query from command line arguments
 const query = process.argv[2];
@@ -50,7 +50,8 @@ const tools = [
           },
           reason: {
             type: 'string',
-            description: 'Brief explanation of why this note is relevant to the query',
+            description:
+              'Brief explanation of why this note is relevant to the query',
           },
           score: {
             type: 'number',
@@ -64,7 +65,11 @@ const tools = [
 ];
 
 // Function to execute tool calls
-function executeTool(name: string, parameters: any, currentFileData?: any): string {
+function executeTool(
+  name: string,
+  parameters: any,
+  currentFileData?: any
+): string {
   switch (name) {
     case 'mark_relevant':
       // Store the relevant note with its content for later use
@@ -77,7 +82,11 @@ function executeTool(name: string, parameters: any, currentFileData?: any): stri
           score: parameters.score,
         });
       }
-      return markRelevant(parameters.filename, parameters.reason, parameters.score);
+      return markRelevant(
+        parameters.filename,
+        parameters.reason,
+        parameters.score
+      );
     default:
       return `Unknown tool: ${name}`;
   }
@@ -180,18 +189,21 @@ Please analyze if this note content is relevant to the user query. If it is rele
 
     // Phase 2: Generate answer using relevant content
     await generateAnswer();
-
   } catch (err) {
     console.error(`❌ Error accessing nodes directory: ${err}`);
-    console.log('💡 Make sure the .kg/nodes/ directory exists with some .md files');
+    console.log(
+      '💡 Make sure the .kg/nodes/ directory exists with some .md files'
+    );
   }
 }
 
 async function generateAnswer() {
   // Show what we found
   if (tagNodes.length > 0) {
-    console.log(`\n📊 Found ${tagNodes.length} tag(s) indicating user interests:`);
-    tagNodes.forEach(tag => console.log(`   - ${tag.title}`));
+    console.log(
+      `\n📊 Found ${tagNodes.length} tag(s) indicating user interests:`
+    );
+    tagNodes.forEach((tag) => console.log(`   - ${tag.title}`));
   }
 
   if (relevantNotes.length === 0) {
@@ -202,14 +214,16 @@ async function generateAnswer() {
   // Sort by relevance score
   relevantNotes.sort((a, b) => b.score - a.score);
 
-  console.log(`\n🎯 Generating answer based on ${relevantNotes.length} relevant source(s):`);
+  console.log(
+    `\n🎯 Generating answer based on ${relevantNotes.length} relevant source(s):`
+  );
 
   // Build context for the final answer
   let contextText = `User Query: "${query}"\n\n`;
 
   if (tagNodes.length > 0) {
     contextText += `User Interests (based on their tags):\n`;
-    tagNodes.forEach(tag => contextText += `- ${tag.title}\n`);
+    tagNodes.forEach((tag) => (contextText += `- ${tag.title}\n`));
     contextText += '\n';
   }
 
@@ -220,7 +234,9 @@ async function generateAnswer() {
   const topNotes = relevantNotes.slice(0, maxNotes);
 
   topNotes.forEach((note, index) => {
-    contextText += `Source ${index + 1}: ${note.title} (Relevance: ${note.score}/10)\n`;
+    contextText += `Source ${index + 1}: ${note.title} (Relevance: ${
+      note.score
+    }/10)\n`;
     contextText += `${note.content}\n\n`;
   });
 
