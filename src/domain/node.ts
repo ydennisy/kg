@@ -1,7 +1,20 @@
 import { randomUUID } from 'node:crypto';
-import { Edge, type EdgeType } from './edge.js';
+// import { Edge, type EdgeType } from './edge.js';
 
 type NodeType = 'note' | 'link' | 'tag' | 'flashcard';
+type EdgeType =
+  | 'references'
+  | 'contains'
+  | 'tagged_with'
+  | 'similar_to'
+  | 'responds_to';
+type Edge = {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: EdgeType | undefined;
+  createdAt: Date;
+};
 
 class Node<T extends Record<string, any> = {}> {
   readonly id: string;
@@ -31,22 +44,34 @@ class Node<T extends Record<string, any> = {}> {
     this.data = data;
   }
 
-  edges(): ReadonlyArray<Edge> {
-    return this._edges;
-  }
+  // get edges(): ReadonlyArray<Edge> {
+  //   return this._edges;
+  // }
 
-  addEdge(targetId: string, type?: EdgeType) {
-    // TODO: should this check be in edge?
-    if (this.id === targetId) {
-      throw new Error('Cannot create self-referencing edge');
-    }
+  // createEdge(targetId: string, type?: EdgeType) {
+  //   // TODO: should this check be in edge?
+  //   if (this.id === targetId) {
+  //     throw new Error('Cannot create self-referencing edge');
+  //   }
 
-    if (this._edges.some((edge) => edge.targetId === targetId)) return;
-    // TODO: add create method or use factory?
-    const edge = new Edge(randomUUID(), this.id, targetId, type, new Date());
-    this._edges.push(edge);
-  }
+  //   // No-op if edge exists
+  //   if (this._edges.some((edge) => edge.targetId === targetId)) return;
+
+  //   const edge = {
+  //     id: randomUUID(),
+  //     sourceId: this.id,
+  //     targetId,
+  //     type,
+  //     createdAt: new Date(),
+  //   };
+  //   this._edges.push(edge);
+  // }
+
+  // // TODO: add invariants!
+  // hydrateEdge(edge: Edge) {
+  //   this._edges.push(edge);
+  // }
 }
 
 export { Node };
-export type { NodeType };
+export type { NodeType, EdgeType };

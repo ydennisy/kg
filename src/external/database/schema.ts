@@ -83,6 +83,10 @@ const edgesRelations = relations(edgesTable, ({ one }) => ({
 
 type NodeRecord = typeof nodesTable.$inferSelect;
 type EdgeRecord = typeof edgesTable.$inferSelect;
+// type NodeRecord = typeof nodesTable.$inferSelect & {
+//   edgeSource: (EdgeRecord & { target: typeof nodesTable.$inferSelect })[];
+//   edgeTarget: (EdgeRecord & { source: typeof nodesTable.$inferSelect })[];
+// };
 
 export { nodesTable, edgesTable, nodesRelations, edgesRelations };
-export type { NodeRecord, EdgeRecord };
+export type { NodeRecord };

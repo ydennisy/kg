@@ -1,18 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
-import { edgesTable, nodesTable } from '../database/schema.js';
+import { nodesTable, edgesTable } from '../database/schema.js';
 import type { DatabaseClient } from '../database/client.js';
 import type {
   NodeRepository,
   SearchResult,
 } from '../../application/ports/node-repository.js';
-import type { Node } from '../../domain/node.js';
+import type { Node, EdgeType } from '../../domain/node.js';
 
 export class SqlNodeRepository implements NodeRepository {
   constructor(private db: DatabaseClient, private mapper: NodeMapper) {}
 
   async save(node: Node): Promise<void> {
-    const edges = node.edges();
+    // const edges = node.edges;
 
     const { id, type, title, isPublic, createdAt, updatedAt, data } =
       this.mapper.toPersistence(node);
@@ -27,19 +28,17 @@ export class SqlNodeRepository implements NodeRepository {
       updatedAt,
       data,
     });
+  }
 
-    if (edges.length > 0) {
-      await this.db.insert(edgesTable).values(
-        // TODO: use a mapper
-        edges.map((edge) => ({
-          id: edge.id,
-          sourceId: edge.sourceId,
-          targetId: edge.targetId,
-          type: edge.type ?? null,
-          createdAt: edge.createdAt.toISOString(),
-        }))
-      );
-    }
+  // TODO: this is temporary helper to add edges until it is handled properly in the domain
+  async link(sourceId: string, targetId: string, type?: EdgeType) {
+    await this.db.insert(edgesTable).values({
+      id: randomUUID(),
+      sourceId,
+      targetId,
+      type: type ?? null,
+      createdAt: new Date().toISOString(),
+    });
   }
 
   async findAll(): Promise<Node[]> {
@@ -48,20 +47,15 @@ export class SqlNodeRepository implements NodeRepository {
   }
 
   async findById(id: string): Promise<Node | null> {
+    // TODO: read up on the different query syntax Drizzle offers
     const node = await this.db.query.nodesTable.findFirst({
       where: eq(nodesTable.id, id),
-      with: {
-        edgeSource: { with: { target: true } },
-        edgeTarget: { with: { source: true } },
-      },
+      // For now we just return the node, no edges and nodes
+      // with: {
+      //   edgeSource: { with: { target: true } },
+      //   edgeTarget: { with: { source: true } },
+      // },
     });
-
-    // const [node] = await this.db
-    //   .select()
-    //   .from(nodesTable)
-    //   .where(eq(nodesTable.id, id))
-    //   .limit(1);
-
     if (!node) return null; // should be undefined?
 
     return this.mapper.toDomain(node);

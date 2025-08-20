@@ -2,15 +2,14 @@ import { AjvValidator } from './external/validation/ajv-validator.js';
 import { NodeFactory } from './domain/node-factory.js';
 import { createDatabaseClient } from './external/database/client.js';
 import { SqlNodeRepository } from './external/repositories/sql-node-repository.js';
-import { SqlEdgeRepository } from './external/repositories/sql-edge-repository.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
-import { EdgeMapper } from './adapters/edge-mapper.js';
-import { EdgeFactory } from './domain/edge-factory.js';
+
 import { CLI } from './external/cli/cli.js';
 import type { JSONSchema } from './domain/ports/validator.js';
+import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
 
 class Application {
   private cli: CLI;
@@ -20,16 +19,16 @@ class Application {
     const nodeFactory = new NodeFactory(validator);
     this.initSchemas(nodeFactory);
     const nodeMapper = new NodeMapper(nodeFactory);
-    const edgeFactory = new EdgeFactory();
-    const edgeMapper = new EdgeMapper(edgeFactory);
+
     // TODO: pass in from config
     const db = createDatabaseClient(
       process.env.DATABASE_URL || 'file:local.db'
     );
     const nodeRepository = new SqlNodeRepository(db, nodeMapper);
-    const edgeRepository = new SqlEdgeRepository(db, edgeMapper);
     const htmlGenerator = new HTMLGenerator();
+
     const createNode = new CreateNodeUseCase(nodeFactory, nodeRepository);
+    const linkNodes = new LinkNodesUseCase(nodeRepository);
     const publishSite = new PublishSiteUseCase(
       nodeRepository,
       htmlGenerator,
@@ -38,9 +37,10 @@ class Application {
     this.cli = new CLI(
       createNode,
       publishSite,
-      nodeRepository,
-      edgeRepository,
-      edgeFactory
+      linkNodes
+      // nodeRepository,
+      // edgeRepository,
+      // edgeFactory
     );
   }
 

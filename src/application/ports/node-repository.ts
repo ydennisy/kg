@@ -1,4 +1,4 @@
-import type { Node } from '../../domain/node.js';
+import type { Node, EdgeType } from '../../domain/node.js';
 
 type SearchResult = {
   node: Node;
@@ -8,6 +8,7 @@ type SearchResult = {
 
 interface NodeRepository {
   save(node: Node): Promise<void>;
+  link(sourceId: string, targetId: string, type?: EdgeType): Promise<void>;
   findAll(): Promise<Node[]>;
   findById(id: string): Promise<Node | null>;
   search(query: string): Promise<SearchResult[]>;

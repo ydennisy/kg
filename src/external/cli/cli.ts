@@ -2,10 +2,9 @@ import { Command } from 'commander';
 import { select, input, confirm } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
+import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { NodeRepository } from '../../application/ports/node-repository.js';
-import type { EdgeRepository } from '../../application/ports/edge-repository.js';
-import type { EdgeFactory } from '../../domain/edge-factory.js';
 import type { NodeType } from '../../domain/node.js';
 
 export class CLI {
@@ -14,9 +13,7 @@ export class CLI {
   constructor(
     private createNodeUseCase: CreateNodeUseCase,
     private publishSiteUseCase: PublishSiteUseCase,
-    private nodeRepository: NodeRepository,
-    private edgeRepository: EdgeRepository,
-    private edgeFactory: EdgeFactory
+    private linkNodesUseCase: LinkNodesUseCase
   ) {
     this.program = new Command();
     this.setupCommands();
