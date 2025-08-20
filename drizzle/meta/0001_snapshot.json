@@ -1,6 +1,6 @@
 {
-  "id": "19ac6ded-d598-4058-9418-aa0d8ba16b35",
-  "prevId": "e92bea02-a347-4264-8305-12c98f206513",
+  "id": "2dca4e35-43df-4c4b-a5e1-2fb350a0be76",
+  "prevId": "13c4775f-a901-4401-aba9-3a27d02e923c",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -43,7 +43,30 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "edges_source_idx": {
+          "name": "edges_source_idx",
+          "columns": [
+            "source_id"
+          ],
+          "isUnique": false
+        },
+        "edges_target_idx": {
+          "name": "edges_target_idx",
+          "columns": [
+            "target_id"
+          ],
+          "isUnique": false
+        },
+        "edges_unique_idx_source_target": {
+          "name": "edges_unique_idx_source_target",
+          "columns": [
+            "source_id",
+            "target_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "edges_source_id_nodes_id_fk": {
           "name": "edges_source_id_nodes_id_fk",
@@ -56,7 +79,7 @@
             "id"
           ],
           "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "cascade"
         },
         "edges_target_id_nodes_id_fk": {
           "name": "edges_target_id_nodes_id_fk",
@@ -69,7 +92,7 @@
             "id"
           ],
           "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -130,7 +153,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "nodes_type_idx": {
+          "name": "nodes_type_idx",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
+        },
+        "nodes_is_public_idx": {
+          "name": "nodes_is_public_idx",
+          "columns": [
+            "is_public"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

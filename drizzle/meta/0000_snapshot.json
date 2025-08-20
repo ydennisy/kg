@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e92bea02-a347-4264-8305-12c98f206513",
+  "id": "13c4775f-a901-4401-aba9-3a27d02e923c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "edges": {
@@ -43,7 +43,30 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "edges_source_idx": {
+          "name": "edges_source_idx",
+          "columns": [
+            "source_id"
+          ],
+          "isUnique": false
+        },
+        "edges_target_idx": {
+          "name": "edges_target_idx",
+          "columns": [
+            "target_id"
+          ],
+          "isUnique": false
+        },
+        "edges_unique_idx_source_target": {
+          "name": "edges_unique_idx_source_target",
+          "columns": [
+            "source_id",
+            "target_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "edges_source_id_nodes_id_fk": {
           "name": "edges_source_id_nodes_id_fk",
@@ -55,7 +78,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "edges_target_id_nodes_id_fk": {
@@ -68,7 +91,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -130,7 +153,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "nodes_type_idx": {
+          "name": "nodes_type_idx",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
+        },
+        "nodes_is_public_idx": {
+          "name": "nodes_is_public_idx",
+          "columns": [
+            "is_public"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

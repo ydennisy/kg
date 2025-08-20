@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
-import { nodesTable } from '../database/schema.js';
+import { edgesTable, nodesTable } from '../database/schema.js';
 import type { DatabaseClient } from '../database/client.js';
 import type {
   NodeRepository,
@@ -12,9 +12,12 @@ export class SqlNodeRepository implements NodeRepository {
   constructor(private db: DatabaseClient, private mapper: NodeMapper) {}
 
   async save(node: Node): Promise<void> {
+    const edges = node.edges();
+
     const { id, type, title, isPublic, createdAt, updatedAt, data } =
       this.mapper.toPersistence(node);
 
+    // TODO: figure out why adding a transactions throws an error that no table exists
     await this.db.insert(nodesTable).values({
       id,
       type,
@@ -24,6 +27,19 @@ export class SqlNodeRepository implements NodeRepository {
       updatedAt,
       data,
     });
+
+    if (edges.length > 0) {
+      await this.db.insert(edgesTable).values(
+        // TODO: use a mapper
+        edges.map((edge) => ({
+          id: edge.id,
+          sourceId: edge.sourceId,
+          targetId: edge.targetId,
+          type: edge.type ?? null,
+          createdAt: edge.createdAt.toISOString(),
+        }))
+      );
+    }
   }
 
   async findAll(): Promise<Node[]> {
@@ -32,11 +48,19 @@ export class SqlNodeRepository implements NodeRepository {
   }
 
   async findById(id: string): Promise<Node | null> {
-    const [node] = await this.db
-      .select()
-      .from(nodesTable)
-      .where(eq(nodesTable.id, id))
-      .limit(1);
+    const node = await this.db.query.nodesTable.findFirst({
+      where: eq(nodesTable.id, id),
+      with: {
+        edgeSource: { with: { target: true } },
+        edgeTarget: { with: { source: true } },
+      },
+    });
+
+    // const [node] = await this.db
+    //   .select()
+    //   .from(nodesTable)
+    //   .where(eq(nodesTable.id, id))
+    //   .limit(1);
 
     if (!node) return null; // should be undefined?
 

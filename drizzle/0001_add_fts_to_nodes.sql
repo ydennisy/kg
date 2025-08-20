@@ -5,19 +5,16 @@ CREATE VIRTUAL TABLE nodes_fts USING fts5(
   data,
   tokenize='porter unicode61 remove_diacritics 2',
   prefix='2 3'
-);
---> statement-breakpoint
+);--> statement-breakpoint
 
 -- Keep the FTS index in sync with nodes table
 CREATE TRIGGER nodes_after_insert AFTER INSERT ON nodes BEGIN
   INSERT INTO nodes_fts(id, title, data) VALUES (new.id, new.title, new.data);
-END;
---> statement-breakpoint
+END;--> statement-breakpoint
 
 CREATE TRIGGER nodes_after_delete AFTER DELETE ON nodes BEGIN
   DELETE FROM nodes_fts WHERE id = old.id;
-END;
---> statement-breakpoint
+END;--> statement-breakpoint
 
 CREATE TRIGGER nodes_after_update AFTER UPDATE ON nodes BEGIN
   DELETE FROM nodes_fts WHERE id = old.id;

@@ -68,6 +68,27 @@ describe('SQLNodeRepository', () => {
     await expect(repository.save(node)).resolves.not.toThrow();
   });
 
+  test('node (with edges) is saved', async () => {
+    // First create & save the target node
+    const targetNode = factory.createNode(
+      nodes[1]!.type,
+      nodes[1]!.title,
+      nodes[1]!.isPublic,
+      nodes[1]!.data
+    );
+    await repository.save(targetNode);
+
+    const node = factory.createNode(
+      nodes[0]!.type,
+      nodes[0]!.title,
+      nodes[0]!.isPublic,
+      nodes[0]!.data
+    );
+    node.addEdge(targetNode.id);
+
+    await expect(repository.save(node)).resolves.not.toThrow();
+  });
+
   test('node is retrieved by ID', async () => {
     const node = factory.createNode(
       nodes[0]!.type,
@@ -78,6 +99,31 @@ describe('SQLNodeRepository', () => {
     await repository.save(node);
     const result = await repository.findById(node.id);
 
+    expect(result).toBeDefined();
+    expect(result).toEqual(node);
+  });
+
+  test('node (with edges) is retrieved by ID', async () => {
+    // First create & save the target node
+    const targetNode = factory.createNode(
+      nodes[1]!.type,
+      nodes[1]!.title,
+      nodes[1]!.isPublic,
+      nodes[1]!.data
+    );
+    await repository.save(targetNode);
+
+    const node = factory.createNode(
+      nodes[0]!.type,
+      nodes[0]!.title,
+      nodes[0]!.isPublic,
+      nodes[0]!.data
+    );
+    node.addEdge(targetNode.id);
+    await repository.save(node);
+    const result = await repository.findById(node.id);
+
+    console.log(result);
     expect(result).toBeDefined();
     expect(result).toEqual(node);
   });
