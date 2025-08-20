@@ -2,6 +2,7 @@ import type { Node } from '../../domain/node.js';
 
 type SearchResult = {
   node: Node;
+  snippet: string;
   score: number;
 };
 

@@ -3,7 +3,8 @@ CREATE VIRTUAL TABLE nodes_fts USING fts5(
   id UNINDEXED,
   title, 
   data,
-  tokenize='porter unicode61'
+  tokenize='porter unicode61 remove_diacritics 2',
+  prefix='2 3'
 );
 --> statement-breakpoint
 

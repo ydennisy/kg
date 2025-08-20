@@ -48,16 +48,34 @@ export class SqlNodeRepository implements NodeRepository {
       return [];
     }
 
-    // Use FTS5 with BM25 scoring, a lower
+    // Turns "quantum compute" into "quantum* compute*"
+    const q = query
+      .trim()
+      .split(/\s+/)
+      .map((t) => `${t}*`)
+      .join(' ');
+
+    // Uses FTS5 with BM25 scoring, a lower
     // BM25 scores indicates higher relevance
+    // Very short terms (e.g., 1 char) won’t benefit from the 2/3-char prefix indexes and may be slower—consider dropping them or requiring ≥2 chars before appending *
     const results = await this.db.all(sql`
       SELECT DISTINCT
-        n.id, n.type, n.title, n.is_public, n.created_at, n.updated_at, n.data,
-        bm25(nodes_fts) as score
-      FROM nodes_fts 
-      JOIN nodes n ON n.id = nodes_fts.id
-      WHERE nodes_fts MATCH ${query}
-      ORDER BY bm25(nodes_fts)
+        n.id,
+        n.type,
+        n.title,
+        n.is_public,
+        n.created_at,
+        n.updated_at,
+        n.data,
+        rank AS score,
+        snippet(nodes_fts, -1, '<b>', '</b>', '…', 20) AS snippet -- Let SQLite pick title or data automatically, upto 20 tokens
+      FROM nodes_fts
+      JOIN nodes n 
+        ON n.id = nodes_fts.id
+      WHERE nodes_fts MATCH ${query}                      -- e.g. "quantum* compute*"
+        AND rank MATCH 'bm25(0.0, 5.0, 1.0)'              -- id is UNINDEXED; weight title=5, data=1
+      ORDER BY rank
+      LIMIT 25
     `);
 
     return results.map((row: any) => ({
@@ -70,6 +88,7 @@ export class SqlNodeRepository implements NodeRepository {
         updatedAt: row.updated_at,
         data: JSON.parse(row.data),
       }),
+      snippet: row.snippet,
       score: Number(row.score),
     }));
   }
