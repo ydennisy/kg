@@ -46,24 +46,17 @@
       "indexes": {
         "edges_source_idx": {
           "name": "edges_source_idx",
-          "columns": [
-            "source_id"
-          ],
+          "columns": ["source_id"],
           "isUnique": false
         },
         "edges_target_idx": {
           "name": "edges_target_idx",
-          "columns": [
-            "target_id"
-          ],
+          "columns": ["target_id"],
           "isUnique": false
         },
         "edges_unique_idx_source_target": {
           "name": "edges_unique_idx_source_target",
-          "columns": [
-            "source_id",
-            "target_id"
-          ],
+          "columns": ["source_id", "target_id"],
           "isUnique": true
         }
       },
@@ -72,12 +65,8 @@
           "name": "edges_source_id_nodes_id_fk",
           "tableFrom": "edges",
           "tableTo": "nodes",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -85,12 +74,8 @@
           "name": "edges_target_id_nodes_id_fk",
           "tableFrom": "edges",
           "tableTo": "nodes",
-          "columnsFrom": [
-            "target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -156,16 +141,12 @@
       "indexes": {
         "nodes_type_idx": {
           "name": "nodes_type_idx",
-          "columns": [
-            "type"
-          ],
+          "columns": ["type"],
           "isUnique": false
         },
         "nodes_is_public_idx": {
           "name": "nodes_is_public_idx",
-          "columns": [
-            "is_public"
-          ],
+          "columns": ["is_public"],
           "isUnique": false
         }
       },

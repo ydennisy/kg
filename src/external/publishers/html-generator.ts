@@ -70,13 +70,16 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private generateIndex(nodes: Node[]): string {
-    const nodesByType = nodes.reduce((acc, node) => {
-      if (!acc[node.type]) {
-        acc[node.type] = [];
-      }
-      acc[node.type]!.push(node);
-      return acc;
-    }, {} as Record<string, Node[]>);
+    const nodesByType = nodes.reduce(
+      (acc, node) => {
+        if (!acc[node.type]) {
+          acc[node.type] = [];
+        }
+        acc[node.type]!.push(node);
+        return acc;
+      },
+      {} as Record<string, Node[]>
+    );
 
     return `<!DOCTYPE html>
 <html lang="en">

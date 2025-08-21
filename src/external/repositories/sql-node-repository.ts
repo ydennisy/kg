@@ -10,7 +10,10 @@ import type {
 import type { Node, EdgeType } from '../../domain/node.js';
 
 export class SqlNodeRepository implements NodeRepository {
-  constructor(private db: DatabaseClient, private mapper: NodeMapper) {}
+  constructor(
+    private db: DatabaseClient,
+    private mapper: NodeMapper
+  ) {}
 
   async save(node: Node): Promise<void> {
     // const edges = node.edges;

@@ -6,6 +6,8 @@
     "build": "tsc",
     "cli": "tsx src/main.ts",
     "test": "vitest",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
     "repomix": "pnpx repomix --ignore 'public/**/*,docs/**/*.md,LICENSE,pnpm-lock.yaml'",
     "site:build": "pnpm run build && node dist/main.js publish",
     "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes",
@@ -28,6 +30,7 @@
     "@dotenvx/dotenvx": "1.49.0",
     "@types/node": "24.2.1",
     "drizzle-kit": "0.31.4",
+    "prettier": "^3.6.2",
     "tsx": "4.20.4",
     "typescript": "5.9.2",
     "vitest": "3.2.4"

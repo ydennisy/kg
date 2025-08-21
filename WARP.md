@@ -77,19 +77,16 @@ pnpm run test --grep "creates a note"
 The project follows strict Clean Architecture with 4 distinct layers:
 
 1. **Domain** (`src/domain/`): Core business entities and factories
-
    - `node.ts`, `edge.ts` - Core entities
    - `node-factory.ts`, `edge-factory.ts` - Factory patterns
    - `ports/` - Interfaces for external dependencies
 
 2. **Application** (`src/application/`): Use cases and business rules
-
    - `use-cases/` - Application business logic (CreateNodeUseCase,
      PublishSiteUseCase)
    - `ports/` - Repository and service interfaces
 
 3. **Adapters** (`src/adapters/`): Data transformation layer
-
    - `node-mapper.ts`, `edge-mapper.ts` - Convert between domain and persistence
      models
 

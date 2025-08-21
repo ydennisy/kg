@@ -346,11 +346,13 @@ export class SchemaRegistry {
 
 ## Tag Architecture
 
-**Important: Tags are now implemented as separate nodes, not as metadata properties.**
+**Important: Tags are now implemented as separate nodes, not as metadata
+properties.**
 
 ### Tag Node Type
 
 Tags are created as nodes with type `'tag'` and the following data structure:
+
 ```typescript
 interface TagData {
   name: string;
@@ -360,13 +362,16 @@ interface TagData {
 ### Tag Relationships
 
 Tag relationships to other nodes should be implemented through:
+
 1. **Separate relationship entities** (future enhancement)
-2. **Query-based discovery** by searching for tag nodes and then finding nodes that reference them
+2. **Query-based discovery** by searching for tag nodes and then finding nodes
+   that reference them
 3. **Link nodes** that connect content nodes to tag nodes
 
 ### Migration from Tag Metadata
 
 Previous architecture stored tags as string arrays on nodes:
+
 ```typescript
 // OLD - removed
 interface Node {
@@ -375,9 +380,12 @@ interface Node {
 ```
 
 New architecture creates separate tag nodes:
+
 ```typescript
 // Create a tag node
-const tagNode = factory.createNode('tag', 'JavaScript', false, { name: 'JavaScript' });
+const tagNode = factory.createNode('tag', 'JavaScript', false, {
+  name: 'JavaScript',
+});
 
 // Relationships are handled separately through links or queries
 ```
