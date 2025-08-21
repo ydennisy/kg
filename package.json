@@ -3,8 +3,8 @@
   "version": "0.0.2",
   "type": "module",
   "scripts": {
+    "kg": "tsx src/main.ts",
     "build": "tsc",
-    "cli": "tsx src/main.ts",
     "test": "vitest",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",

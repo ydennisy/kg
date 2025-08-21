@@ -27,7 +27,7 @@ class CreateNodeUseCase {
         input.data
       );
       await this.repository.save(node);
-      return { ok: true as const, node };
+      return { ok: true as const, result: node };
     } catch (err) {
       return { ok: false as const, error: (err as Error).message };
     }

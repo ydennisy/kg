@@ -6,6 +6,7 @@ import type { CreateNodeUseCase } from '../../application/use-cases/create-node.
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
+import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { NodeType } from '../../domain/node.js';
 
 export class CLI {
@@ -13,9 +14,10 @@ export class CLI {
 
   constructor(
     private createNodeUseCase: CreateNodeUseCase,
-    private publishSiteUseCase: PublishSiteUseCase,
     private linkNodesUseCase: LinkNodesUseCase,
-    private searchNodesUseCase: SearchNodesUseCase
+    private searchNodesUseCase: SearchNodesUseCase,
+    private getNodeUseCase: GetNodeUseCase,
+    private publishSiteUseCase: PublishSiteUseCase
   ) {
     this.program = new Command();
     this.setupCommands();
@@ -36,6 +38,13 @@ export class CLI {
       .description('Create a new node')
       .action(async () => {
         await this.createNode();
+      });
+
+    this.program
+      .command('search')
+      .description('Search nodes')
+      .action(async () => {
+        await this.searchNodes();
       });
 
     this.program
@@ -60,7 +69,7 @@ export class CLI {
       });
 
       // Step 2: Collect data based on node type
-      const { title, data } = await this.collectNodeData(nodeType);
+      const { title, data } = await this.collectNodeInput(nodeType);
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
@@ -77,7 +86,7 @@ export class CLI {
       });
 
       if (result.ok) {
-        console.log(`✅ Created ${nodeType} node with ID: ${result.node.id}`);
+        console.log(`✅ Created ${nodeType} node with ID: ${result.result.id}`);
 
         // Step 5: Ask if user wants to link to existing nodes
         const shouldLink = await confirm({
@@ -86,7 +95,7 @@ export class CLI {
         });
 
         if (shouldLink) {
-          await this.linkNodesToNewNode(result.node.id);
+          await this.linkNode(result.result.id);
         }
       } else {
         console.error(`❌ Error creating node: ${result.error}`);
@@ -98,7 +107,51 @@ export class CLI {
     }
   }
 
-  private async collectNodeData(
+  private async searchNodes() {
+    // TODO: use code such as the below to use the snippet highlight from FTS5
+    //   const preview = this.formatNodePreview(node);
+    //   const highlightedSnippet = snippet
+    //     .replace(/<b>/g, '\x1b[1m')
+    //     .replace(/<\/b>/g, '\x1b[0m');
+
+    const nodeId = await autocomplete({
+      message: 'Query:',
+      emptyText: 'Enter a query to search...',
+      pageSize: 20,
+      source: async (query) => {
+        if (!query) {
+          return [];
+        }
+        const result = await this.searchNodesUseCase.execute({ query });
+        if (!result.ok) {
+          console.error(`❌ Error searching nodes: ${result.error}`);
+          process.exit(1);
+        }
+        return result.result.map(({ node, score, snippet }) => {
+          return {
+            value: node.id,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            description: `${snippet}\n${JSON.stringify(node.data)}`,
+          };
+        });
+      },
+    });
+
+    const result = await this.getNodeUseCase.execute({ id: nodeId });
+
+    if (!result.ok) {
+      console.error(`❌ Error fetching node: ${result.error}`);
+      process.exit(1);
+    }
+
+    await editor({
+      message: 'Read only node was displayed in the editor',
+      default: JSON.stringify(result.result, undefined, 2),
+      waitForUseInput: false,
+    });
+  }
+
+  private async collectNodeInput(
     nodeType: NodeType
   ): Promise<{ title: string | undefined; data: Record<string, unknown> }> {
     switch (nodeType) {
@@ -172,7 +225,7 @@ export class CLI {
 
       if (result.ok) {
         console.log(
-          `✅ Successfully published ${result.filesGenerated} files to ${result.outputDir}`
+          `✅ Successfully published ${result.result.filesGenerated} files to ${result.result.outputDir}`
         );
       } else {
         console.error(`❌ Error publishing site: ${result.error}`);
@@ -184,7 +237,7 @@ export class CLI {
     }
   }
 
-  private async linkNodesToNewNode(newNodeId: string): Promise<void> {
+  private async linkNode(newNodeId: string): Promise<void> {
     try {
       const selectedNodes: string[] = [];
 
@@ -215,7 +268,7 @@ export class CLI {
               ];
             }
 
-            const results = searchResult.results;
+            const results = searchResult.result;
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(
@@ -235,7 +288,7 @@ export class CLI {
 
             return filteredResults.map(({ node, score }) => {
               // Get a preview of the data
-              const dataPreview = this.getNodeDataPreview(node);
+              const dataPreview = this.formatNodePreview(node);
 
               return {
                 name: `[${node.type.toUpperCase()}] ${
@@ -278,7 +331,7 @@ export class CLI {
     }
   }
 
-  private getNodeDataPreview(node: any): string {
+  private formatNodePreview(node: any): string {
     const data = node.data;
 
     if (typeof data === 'string') {

@@ -36,8 +36,7 @@ class PublishSiteUseCase {
 
       return {
         ok: true as const,
-        filesGenerated: siteFiles.length,
-        outputDir: this.outputDir,
+        result: { filesGenerated: siteFiles.length, outputDir: this.outputDir },
       };
     } catch (err) {
       return { ok: false as const, error: (err as Error).message };

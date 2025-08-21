@@ -3,6 +3,7 @@ import { NodeFactory } from './domain/node-factory.js';
 import { createDatabaseClient } from './external/database/client.js';
 import { SqlNodeRepository } from './external/repositories/sql-node-repository.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
+import { GetNodeUseCase } from './application/use-cases/get-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
@@ -30,12 +31,19 @@ class Application {
     const createNode = new CreateNodeUseCase(nodeFactory, nodeRepository);
     const linkNodes = new LinkNodesUseCase(nodeRepository);
     const searchNodes = new SearchNodesUseCase(nodeRepository);
+    const getNode = new GetNodeUseCase(nodeRepository);
     const publishSite = new PublishSiteUseCase(
       nodeRepository,
       htmlGenerator,
       './public'
     );
-    this.cli = new CLI(createNode, publishSite, linkNodes, searchNodes);
+    this.cli = new CLI(
+      createNode,
+      linkNodes,
+      searchNodes,
+      getNode,
+      publishSite
+    );
   }
 
   public run(): void {
