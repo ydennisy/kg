@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
+import packageJSON from '../../../package.json' with { type: 'json' };
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
@@ -25,7 +26,10 @@ export class CLI {
   }
 
   private setupCommands(): void {
-    this.program.name('kg').description('Knowledge Graph CLI').version('0.0.1');
+    this.program
+      .name('kg')
+      .description('Knowledge Graph CLI')
+      .version(packageJSON.version);
 
     this.program
       .command('create')
