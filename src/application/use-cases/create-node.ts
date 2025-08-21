@@ -4,7 +4,7 @@ import type { NodeType } from '../../domain/node.js';
 
 type CreateNodeInput<T extends Record<string, unknown>> = {
   type: NodeType;
-  title?: string;
+  title?: string | undefined;
   data: T;
   isPublic?: boolean;
 };

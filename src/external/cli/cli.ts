@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { select, input, confirm } from '@inquirer/prompts';
+import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
@@ -55,19 +55,16 @@ export class CLI {
         ],
       });
 
-      // Step 2: Collect title
-      const title = await this.collectTitle(nodeType);
+      // Step 2: Collect data based on node type
+      const { title, data } = await this.collectNodeData(nodeType);
 
-      // Step 3: Collect data based on node type
-      const data = await this.collectNodeData(nodeType);
-
-      // Step 4: Ask if node should be public
+      // Step 3: Ask if node should be public
       const isPublic = await confirm({
         message: 'Make this node public?',
         default: false,
       });
 
-      // Step 5: Create the node
+      // Step 4: Create the node
       const result = await this.createNodeUseCase.execute({
         type: nodeType,
         title,
@@ -78,7 +75,7 @@ export class CLI {
       if (result.ok) {
         console.log(`✅ Created ${nodeType} node with ID: ${result.node.id}`);
 
-        // Step 6: Ask if user wants to link to existing nodes
+        // Step 5: Ask if user wants to link to existing nodes
         const shouldLink = await confirm({
           message: 'Would you like to link this node to existing nodes?',
           default: false,
@@ -97,54 +94,53 @@ export class CLI {
     }
   }
 
-  private async collectTitle(nodeType: NodeType): Promise<string> {
-    if (nodeType === 'note') {
-      return await input({
-        message: 'Enter note title:',
-        validate: (value: string) =>
-          value.trim().length > 0 || 'Title is required for notes',
-      });
-    } else {
-      return await input({
-        message: `Enter ${nodeType} title (optional):`,
-        default: '',
-      });
-    }
-  }
-
   private async collectNodeData(
     nodeType: NodeType
-  ): Promise<Record<string, unknown>> {
+  ): Promise<{ title: string | undefined; data: Record<string, unknown> }> {
     switch (nodeType) {
-      case 'note':
-        return {
-          content: await input({
-            message: 'Enter note content:',
-            validate: (value: string) =>
-              value.trim().length > 0 || 'Content is required',
+      case 'note': {
+        const title = await input({
+          message: 'Enter note title:',
+          validate: (value: string) =>
+            value.trim().length > 0 || 'Title is required for notes',
+        });
+        const data = {
+          content: await editor({
+            message: 'Enter note content (will open in editor):',
+            waitForUseInput: false,
           }),
         };
+        return { title, data };
+      }
 
-      case 'link':
-        return {
+      case 'link': {
+        const data = {
           url: await input({
             message: 'Enter URL:',
             validate: (value: string) =>
               value.trim().length > 0 || 'URL is required',
           }),
         };
+        const title = await input({
+          message: 'Enter URL title, or leave blank to use crawled title:',
+          default: '',
+        });
+        return { title, data };
+      }
 
-      case 'tag':
-        return {
+      case 'tag': {
+        const data = {
           name: await input({
             message: 'Enter tag name:',
             validate: (value: string) =>
               value.trim().length > 0 || 'Name is required',
           }),
         };
+        return { title: undefined, data };
+      }
 
-      case 'flashcard':
-        return {
+      case 'flashcard': {
+        const data = {
           front: await input({
             message: 'Enter flashcard front text:',
             validate: (value: string) =>
@@ -156,6 +152,8 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
+        return { title: undefined, data };
+      }
 
       default:
         throw new Error(`Unknown node type: ${nodeType}`);
