@@ -5,12 +5,14 @@ import { SqlNodeRepository } from './external/repositories/sql-node-repository.j
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
 import { HTTPCrawler } from './external/crawlers/http-crawler.js';
+import { OllamaFlashcardGenerator } from './external/ai-services/ollama-flashcard-generator.js';
 import { CLI } from './external/cli/cli.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { GetNodeUseCase } from './application/use-cases/get-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
 import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
+import { GenerateFlashcardsUseCase } from './application/use-cases/generate-flashcards.js';
 import type { JSONSchema } from './domain/ports/validator.js';
 
 class Application {
@@ -29,6 +31,7 @@ class Application {
     const nodeRepository = new SqlNodeRepository(db, nodeMapper);
     const htmlGenerator = new HTMLGenerator();
     const crawler = new HTTPCrawler();
+    const flashcardGenerator = new OllamaFlashcardGenerator();
 
     const createNode = new CreateNodeUseCase(
       nodeFactory,
@@ -38,6 +41,10 @@ class Application {
     const linkNodes = new LinkNodesUseCase(nodeRepository);
     const searchNodes = new SearchNodesUseCase(nodeRepository);
     const getNode = new GetNodeUseCase(nodeRepository);
+    const generateFlashcards = new GenerateFlashcardsUseCase(
+      nodeRepository,
+      flashcardGenerator
+    );
     const publishSite = new PublishSiteUseCase(
       nodeRepository,
       htmlGenerator,
@@ -48,6 +55,7 @@ class Application {
       linkNodes,
       searchNodes,
       getNode,
+      generateFlashcards,
       publishSite
     );
   }

@@ -2,12 +2,14 @@ import { Command } from 'commander';
 import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
+import type { NodeType } from '../../domain/node.js';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
-import type { NodeType } from '../../domain/node.js';
+import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
+import type { Flashcard } from '../../application/ports/flashcard-generator.js';
 
 export class CLI {
   private program: Command;
@@ -17,6 +19,7 @@ export class CLI {
     private linkNodesUseCase: LinkNodesUseCase,
     private searchNodesUseCase: SearchNodesUseCase,
     private getNodeUseCase: GetNodeUseCase,
+    private generateFlashcardsUseCase: GenerateFlashcardsUseCase,
     private publishSiteUseCase: PublishSiteUseCase
   ) {
     this.program = new Command();
@@ -45,6 +48,13 @@ export class CLI {
       .description('Search nodes')
       .action(async () => {
         await this.searchNodes();
+      });
+
+    this.program
+      .command('gf')
+      .description('Generate flashcards given a node')
+      .action(async () => {
+        await this.generateFlashcards();
       });
 
     this.program
@@ -146,6 +156,245 @@ export class CLI {
       default: JSON.stringify(result.result, undefined, 2),
       waitForUseInput: false,
     });
+  }
+
+  private async generateFlashcards() {
+    // TODO: extract logic, used in a few places
+    const nodeId = await autocomplete({
+      message: 'Query:',
+      emptyText: 'Enter a query to search...',
+      pageSize: 20,
+      source: async (query) => {
+        if (!query) {
+          return [];
+        }
+        const result = await this.searchNodesUseCase.execute({ query });
+        if (!result.ok) {
+          console.error(`❌ Error searching nodes: ${result.error}`);
+          process.exit(1);
+        }
+        return result.result.map(({ node, score, snippet }) => {
+          const highlightedSnippet = snippet
+            .replace(/<b>/g, '\x1b[1m')
+            .replace(/<\/b>/g, '\x1b[0m');
+          return {
+            value: node.id,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            description: `${highlightedSnippet}`,
+          };
+        });
+      },
+    });
+
+    console.log('\n🎯 Generating flashcards...\n');
+
+    const result = await this.generateFlashcardsUseCase.execute({
+      id: nodeId,
+    });
+
+    if (!result.ok) {
+      console.error(`❌ Error generating flashcards: ${result.error}`);
+      process.exit(1);
+    }
+
+    const flashcards = result.result;
+
+    if (flashcards.length === 0) {
+      console.log('No flashcards were generated.');
+      return;
+    }
+
+    console.log(
+      `✨ Generated ${flashcards.length} flashcards. Let's review them!\n`
+    );
+
+    const selectedFlashcards = await this.reviewFlashcards(flashcards);
+
+    if (selectedFlashcards.length === 0) {
+      console.log('\n❌ No flashcards were selected for saving.');
+      return;
+    }
+
+    const makePublic = await confirm({
+      message: `Make all ${selectedFlashcards.length} kept cards public?`,
+      default: false,
+    });
+
+    // Save selected flashcards
+    console.log(`\n💾 Saving ${selectedFlashcards.length} flashcards...`);
+
+    const createdIds: string[] = [];
+    for (const flashcard of selectedFlashcards) {
+      const saveResult = await this.createNodeUseCase.execute({
+        type: 'flashcard',
+        data: {
+          front: flashcard.front,
+          back: flashcard.back,
+        },
+        isPublic: makePublic,
+      });
+      if (saveResult.ok) {
+        createdIds.push(saveResult.result.id);
+      } else {
+        console.error(`  ❌ Failed to save a flashcard: ${saveResult.error}`);
+      }
+    }
+
+    console.log(`✅ Successfully saved ${createdIds.length} flashcards!`);
+
+    for (const id of createdIds) {
+      const linkRes = await this.linkNodesUseCase.execute({
+        sourceId: nodeId,
+        targetId: id,
+      });
+      if (!linkRes.ok) {
+        console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
+      }
+    }
+    console.log(
+      `🔗 Linked ${createdIds.length} flashcards to the source node.`
+    );
+  }
+
+  private async reviewFlashcards(flashcards: Array<Flashcard>) {
+    const selectedFlashcards: Array<{ front: string; back: string }> = [];
+    let currentIndex = 0;
+
+    while (currentIndex < flashcards.length) {
+      const card = flashcards[currentIndex];
+
+      if (!card) {
+        // TODO: error
+        break;
+      }
+      // Clear the console for a cleaner view (optional)
+      console.clear();
+
+      // Display progress
+      console.log(`\n📚 Card ${currentIndex + 1} of ${flashcards.length}`);
+      console.log('─'.repeat(50));
+
+      // Show the card
+      console.log('\n🎯 FRONT:');
+      console.log(`   ${card.front}`);
+      console.log('\n💡 BACK:');
+      console.log(`   ${card.back}`);
+
+      // Ask what to do with this card
+      const action = await select({
+        message: '\nWhat would you like to do with this card?',
+        choices: [
+          { name: '✅ Keep this card', value: 'keep' },
+          { name: '❌ Discard this card', value: 'discard' },
+          { name: '⏮️ Previous card', value: 'previous' },
+          { name: '⏭️ Skip to next', value: 'next' },
+          { name: '📝 Edit and keep', value: 'edit' },
+          { name: '🚪 Finish review', value: 'quit' },
+        ],
+      });
+
+      switch (action) {
+        case 'keep':
+          if (
+            !selectedFlashcards.some(
+              (fc) => fc.front === card.front && fc.back === card.back
+            )
+          ) {
+            selectedFlashcards.push(card);
+            console.log('✅ Card added to selection');
+          }
+          currentIndex++;
+          break;
+
+        case 'discard':
+          // Remove from selected if it was previously added
+          const index = selectedFlashcards.findIndex(
+            (fc) => fc.front === card.front && fc.back === card.back
+          );
+          if (index > -1) {
+            selectedFlashcards.splice(index, 1);
+          }
+          console.log('❌ Card discarded');
+          currentIndex++;
+          break;
+
+        case 'previous':
+          if (currentIndex > 0) {
+            currentIndex--;
+          } else {
+            console.log('⚠️  Already at the first card');
+          }
+          break;
+
+        case 'next':
+          currentIndex++;
+          break;
+
+        case 'edit':
+          const editedFront = await input({
+            message: 'Edit front:',
+            default: card.front,
+          });
+
+          const editedBack = await input({
+            message: 'Edit back:',
+            default: card.back,
+          });
+
+          const editedCard = { front: editedFront, back: editedBack };
+
+          // Remove old version if exists and add edited version
+          const oldIndex = selectedFlashcards.findIndex(
+            (fc) => fc.front === card.front && fc.back === card.back
+          );
+          if (oldIndex > -1) {
+            selectedFlashcards.splice(oldIndex, 1);
+          }
+          selectedFlashcards.push(editedCard);
+          console.log('✅ Edited card added to selection');
+          currentIndex++;
+          break;
+
+        case 'quit':
+          const confirmQuit = await confirm({
+            message: `You've selected ${selectedFlashcards.length} cards. Finish review and save?`,
+            default: true,
+          });
+          if (confirmQuit) {
+            return selectedFlashcards;
+          }
+          break;
+      }
+    }
+
+    if (currentIndex >= flashcards.length) {
+      console.clear();
+      console.log("\n🎉 You've reviewed all flashcards!");
+      console.log(
+        `📊 Selected: ${selectedFlashcards.length} out of ${flashcards.length} cards`
+      );
+
+      const finalAction = await select({
+        message: 'What would you like to do?',
+        choices: [
+          { name: '💾 Save selected cards', value: 'save' },
+          { name: '🔄 Review again', value: 'review' },
+          { name: '❌ Discard all and exit', value: 'discard' },
+        ],
+      });
+
+      switch (finalAction) {
+        case 'save':
+          return selectedFlashcards;
+        case 'review':
+          currentIndex = 0;
+          break;
+        case 'discard':
+          return [];
+      }
+    }
+
+    return selectedFlashcards;
   }
 
   private async collectNodeInput(

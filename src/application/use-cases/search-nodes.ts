@@ -10,7 +10,7 @@ class SearchNodesUseCase {
   async execute(
     input: SearchNodesInput
   ): Promise<
-    { ok: true; result: SearchResult[] } | { ok: false; error: string }
+    { ok: true; result: Array<SearchResult> } | { ok: false; error: string }
   > {
     try {
       const result = await this.repository.search(input.query);
