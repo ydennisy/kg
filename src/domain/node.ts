@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+// import { randomUUID } from 'node:crypto';
 // import { Edge, type EdgeType } from './edge.js';
 
 type NodeType = 'note' | 'link' | 'tag' | 'flashcard';
@@ -8,13 +8,13 @@ type EdgeType =
   | 'tagged_with'
   | 'similar_to'
   | 'responds_to';
-type Edge = {
-  id: string;
-  sourceId: string;
-  targetId: string;
-  type: EdgeType | undefined;
-  createdAt: Date;
-};
+// type Edge = {
+//   id: string;
+//   sourceId: string;
+//   targetId: string;
+//   type: EdgeType | undefined;
+//   createdAt: Date;
+// };
 
 class Node<T extends Record<string, any> = {}> {
   readonly id: string;
@@ -24,7 +24,6 @@ class Node<T extends Record<string, any> = {}> {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly data: T;
-  private _edges: Array<Edge> = [];
 
   constructor(
     id: string,

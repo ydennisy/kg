@@ -108,12 +108,6 @@ export class CLI {
   }
 
   private async searchNodes() {
-    // TODO: use code such as the below to use the snippet highlight from FTS5
-    //   const preview = this.formatNodePreview(node);
-    //   const highlightedSnippet = snippet
-    //     .replace(/<b>/g, '\x1b[1m')
-    //     .replace(/<\/b>/g, '\x1b[0m');
-
     const nodeId = await autocomplete({
       message: 'Query:',
       emptyText: 'Enter a query to search...',
@@ -128,10 +122,13 @@ export class CLI {
           process.exit(1);
         }
         return result.result.map(({ node, score, snippet }) => {
+          const highlightedSnippet = snippet
+            .replace(/<b>/g, '\x1b[1m')
+            .replace(/<\/b>/g, '\x1b[0m');
           return {
             value: node.id,
             name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
-            description: `${snippet}\n${JSON.stringify(node.data)}`,
+            description: `${highlightedSnippet}`,
           };
         });
       },

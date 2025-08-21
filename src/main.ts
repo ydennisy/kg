@@ -2,12 +2,13 @@ import { AjvValidator } from './external/validation/ajv-validator.js';
 import { NodeFactory } from './domain/node-factory.js';
 import { createDatabaseClient } from './external/database/client.js';
 import { SqlNodeRepository } from './external/repositories/sql-node-repository.js';
+import { HTMLGenerator } from './external/publishers/html-generator.js';
+import { NodeMapper } from './adapters/node-mapper.js';
+import { HTTPCrawler } from './external/crawlers/http-crawler.js';
+import { CLI } from './external/cli/cli.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { GetNodeUseCase } from './application/use-cases/get-node.js';
 import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
-import { HTMLGenerator } from './external/publishers/html-generator.js';
-import { NodeMapper } from './adapters/node-mapper.js';
-import { CLI } from './external/cli/cli.js';
 import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
 import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
 import type { JSONSchema } from './domain/ports/validator.js';
@@ -27,8 +28,13 @@ class Application {
     );
     const nodeRepository = new SqlNodeRepository(db, nodeMapper);
     const htmlGenerator = new HTMLGenerator();
+    const crawler = new HTTPCrawler();
 
-    const createNode = new CreateNodeUseCase(nodeFactory, nodeRepository);
+    const createNode = new CreateNodeUseCase(
+      nodeFactory,
+      nodeRepository,
+      crawler
+    );
     const linkNodes = new LinkNodesUseCase(nodeRepository);
     const searchNodes = new SearchNodesUseCase(nodeRepository);
     const getNode = new GetNodeUseCase(nodeRepository);
@@ -60,8 +66,8 @@ class Application {
 
     const linkSchema = {
       type: 'object',
-      properties: { url: { type: 'string' } },
-      required: ['url'],
+      properties: { url: { type: 'string' }, text: { type: 'string' } },
+      required: ['url', 'text'],
       additionalProperties: false,
     } satisfies JSONSchema;
 
