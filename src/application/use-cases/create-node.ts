@@ -6,8 +6,8 @@ import type { Crawler } from '../ports/crawler.js';
 type CreateNodeInput<T extends Record<string, unknown>> = {
   type: NodeType;
   title?: string | undefined;
-  data: T;
   isPublic?: boolean;
+  data: T;
 };
 
 class CreateNodeUseCase {

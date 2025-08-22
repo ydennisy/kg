@@ -8,7 +8,7 @@
     "test": "vitest",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "repomix": "pnpx repomix --ignore 'public/**/*,docs/**/*.md,LICENSE,pnpm-lock.yaml'",
+    "repomix": "pnpx repomix --include 'src/**/*,AGENTS.md,README.md'",
     "site:build": "pnpm run build && node dist/main.js publish",
     "site:serve": "pnpx serve public",
     "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes",
