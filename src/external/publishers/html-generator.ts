@@ -6,6 +6,7 @@ import type {
 
 interface LinkData {
   url: string;
+  html?: string;
 }
 
 interface FlashcardData {
@@ -160,6 +161,12 @@ export class HTMLGenerator implements SiteGenerator {
     switch (node.type) {
       case 'link':
         if (this.isLinkData(node.data)) {
+          if (node.data.html) {
+            return `
+        <div class="link-content">
+            ${node.data.html}
+        </div>`;
+          }
           return `
         <div class="link-content">
             <a href="${this.escapeHtml(
