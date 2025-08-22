@@ -27,6 +27,7 @@
     "drizzle-orm": "0.44.4",
     "inquirer-autocomplete-standalone": "0.8.1",
     "jsdom": "26.1.0",
+    "marked": "^16.2.0",
     "ollama": "0.5.17"
   },
   "devDependencies": {

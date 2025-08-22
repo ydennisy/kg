@@ -32,6 +32,9 @@ importers:
       jsdom:
         specifier: 26.1.0
         version: 26.1.0
+      marked:
+        specifier: ^16.2.0
+        version: 16.2.0
       ollama:
         specifier: 0.5.17
         version: 0.5.17
@@ -40,7 +43,7 @@ importers:
         specifier: 1.49.0
         version: 1.49.0
       '@types/jsdom':
-        specifier: ^21.1.7
+        specifier: 21.1.7
         version: 21.1.7
       '@types/node':
         specifier: 24.2.1
@@ -1163,6 +1166,11 @@ packages:
 
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
+
+  marked@16.2.0:
+    resolution: {integrity: sha512-LbbTuye+0dWRz2TS9KJ7wsnD4KAtpj0MVkWc90XvBa6AslXsT0hTBVH5k32pcSyHH1fst9XEFJunXHktVy0zlg==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   merge-stream@2.0.0:
     resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}
@@ -2422,6 +2430,8 @@ snapshots:
   magic-string@0.30.17:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  marked@16.2.0: {}
 
   merge-stream@2.0.0: {}
 

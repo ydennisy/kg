@@ -1,3 +1,4 @@
+import { marked } from 'marked';
 import type { Node } from '../../domain/node.js';
 import type {
   SiteGenerator,
@@ -161,6 +162,15 @@ export class HTMLGenerator implements SiteGenerator {
 
   private renderNodeContent(node: Node): string {
     switch (node.type) {
+      case 'note':
+        if (this.isContentData(node.data)) {
+          const html = marked.parse(this.escapeHtml(node.data.content));
+          return `
+        <div class="note-content">
+            ${html}
+        </div>`;
+        }
+        break;
       case 'link':
         if (this.isLinkData(node.data)) {
           if (node.data.html) {
