@@ -70,6 +70,16 @@ pnpm run test src/domain/node-factory.test.ts
 pnpm run test --grep "creates a note"
 ```
 
+## Development Principles
+
+This is a VERY IMPORTANT section, make sure you evaluate your changes based on
+this section at all times.
+
+### PR & Commits
+
+- Open PRs which are prefixed by the type of change, they should be one of:
+  feat/, chore/, refactor/ or fix/.
+
 ## Architecture
 
 ### Clean Architecture Layers
