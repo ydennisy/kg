@@ -87,20 +87,37 @@ func (n *NavigationModel) View() string {
 			continue
 		}
 
-		var line string
-
-		// Option content
-		if i == n.selectedIndex {
-			line += lipgloss.NewStyle(). 
-				Foreground(utils.ColorPrimary).
-				Bold(true).
-				Render("▸ " + option.Label)
-		} else {
-			line += lipgloss.NewStyle().
-				Foreground(utils.ColorMuted).
-				Render("  " + option.Label)
+		// Format key hint
+		keyHint := ""
+		if n.showKeys && option.Key != "" {
+			keyHint = lipgloss.NewStyle().
+				Foreground(utils.ColorSecondary).
+				Render("[" + option.Key + "]")
 		}
 
+		// Format option label with proper spacing
+		var labelStyle lipgloss.Style
+		var prefix string
+		if i == n.selectedIndex {
+			labelStyle = lipgloss.NewStyle().Foreground(utils.ColorPrimary).Bold(true)
+			prefix = "▸ "
+		} else {
+			labelStyle = lipgloss.NewStyle().Foreground(utils.ColorMuted)
+			prefix = "  "
+		}
+
+		// Format the main label with selected indicator
+		label := labelStyle.Render(prefix + option.Label)
+
+		// Combine key hint and label on a single line
+		line := ""
+		if keyHint != "" {
+			line = lipgloss.JoinHorizontal(lipgloss.Left, keyHint, " ", label)
+		} else {
+			line = label
+		}
+
+		// Add the line to the output with single newline
 		b.WriteString(line + "\n")
 	}
 

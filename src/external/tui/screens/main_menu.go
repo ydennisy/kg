@@ -49,7 +49,8 @@ func NewMainMenuModel() *MainMenuModel {
 		},
 	}
 
-	nav := components.NewNavigationModel("🔗 Knowledge Graph - Main Menu", options, 80, 20)
+	// Use a larger height to accommodate the expanded menu items
+	nav := components.NewNavigationModel("🔗 Knowledge Graph - Main Menu", options, 80, 30)
 
 	return &MainMenuModel{
 		navigation: nav,
