@@ -1,7 +1,7 @@
-# WARP.md
+# Instructions for AI Coding Agents
 
-This file provides guidance to WARP (warp.dev) when working with code in this
-repository.
+This file provides guidance to coding agents, such as Claude Code, Gemini, Warp,
+Codex, etc when working with code in this repository.
 
 ## Project Overview
 
