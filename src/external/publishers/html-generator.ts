@@ -129,19 +129,20 @@ export class HTMLGenerator implements SiteGenerator {
             <a href="../index.html">← Back to Index</a>
         </nav>
     </header>
-    
+
     <main>
         <article class="node-detail">
             <div class="node-meta">
                 <span class="node-type">${node.type}</span>
                 <time>${node.createdAt.toLocaleDateString()}</time>
             </div>
-            
+
             <h1>${this.getNodeTitle(node)}</h1>
-            
+            <p class="node-id">${node.id}</p>
+
             ${this.renderNodeContent(node)}
         </article>
-        
+
         ${this.renderRelatedNodes(node, allNodes)}
     </main>
 </body>
@@ -153,6 +154,7 @@ export class HTMLGenerator implements SiteGenerator {
     <a href="nodes/${node.id}.html" class="node-card">
         <div class="node-type-badge">${node.type}</div>
         <h3>${this.getNodeTitle(node)}</h3>
+        <p class="node-id">${node.id}</p>
         <p>${this.getNodeSummary(node)}</p>
     </a>`;
   }
@@ -203,6 +205,11 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private getNodeTitle(node: Node): string {
+    if (node.title && node.title.trim().length > 0) {
+      return this.escapeHtml(node.title);
+    }
+
+    // Fallback to previous heuristics if title is missing
     switch (node.type) {
       case 'link':
         if (this.isLinkData(node.data)) {
@@ -308,6 +315,12 @@ h2 { font-size: 1.8rem; margin: 2rem 0 1rem; }
   border-radius: 4px;
   font-size: 0.75rem;
   text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.node-id {
+  font-size: 0.75rem;
+  color: #666666;
   margin-bottom: 0.5rem;
 }
 
