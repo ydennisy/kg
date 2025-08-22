@@ -5,6 +5,7 @@ import { AjvValidator } from '../../external/validation/ajv-validator.js';
 import type { JSONSchema } from '../../domain/ports/validator.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Node } from '../../domain/node.js';
+import type { Crawler } from '../ports/crawler.js';
 
 const mockRepository: NodeRepository = {
   save: async (node: Node) => Promise.resolve(),
@@ -12,6 +13,16 @@ const mockRepository: NodeRepository = {
   findAll: async () => Promise.resolve([]),
   search: async (query: string) => Promise.resolve([]),
   link: async (sourceId: string, targetId: string, type?) => Promise.resolve(),
+};
+
+const mockCrawler: Crawler = {
+  fetch: async (url: string) => ({
+    url,
+    title: undefined,
+    text: 'Example Website Title',
+    markdown: 'Example Website Title',
+    html: '<p>Example Website Title</p>',
+  }),
 };
 
 describe('CreateNodeUseCase', () => {
@@ -28,7 +39,11 @@ describe('CreateNodeUseCase', () => {
 
     factory.registerSchema('note', noteSchema);
 
-    const useCase = new CreateNodeUseCase(factory, mockRepository);
+    const useCase = new CreateNodeUseCase(
+      factory,
+      mockRepository,
+      mockCrawler
+    );
 
     const result = await useCase.execute({
       type: 'note',
@@ -39,10 +54,10 @@ describe('CreateNodeUseCase', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.node.type).toBe('note');
-      expect(result.node.title).toBe('My Note');
-      expect(result.node.data.content).toBe('hello world');
-      expect(result.node.isPublic).toBe(false);
+      expect(result.result.type).toBe('note');
+      expect(result.result.title).toBe('My Note');
+      expect(result.result.data.content).toBe('hello world');
+      expect(result.result.isPublic).toBe(false);
     }
   });
 
@@ -59,7 +74,11 @@ describe('CreateNodeUseCase', () => {
 
     factory.registerSchema('note', noteSchema);
 
-    const useCase = new CreateNodeUseCase(factory, mockRepository);
+    const useCase = new CreateNodeUseCase(
+      factory,
+      mockRepository,
+      mockCrawler
+    );
 
     const result = await useCase.execute({
       type: 'note',
@@ -69,9 +88,9 @@ describe('CreateNodeUseCase', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.node.type).toBe('note');
-      expect(result.node.title).toBe('Untitled Note');
-      expect(result.node.data.content).toBe('hyee');
+      expect(result.result.type).toBe('note');
+      expect(result.result.title).toBe('Untitled Note');
+      expect(result.result.data.content).toBe('hyee');
     }
   });
 
@@ -81,14 +100,22 @@ describe('CreateNodeUseCase', () => {
 
     const linkSchema = {
       type: 'object',
-      properties: { url: { type: 'string' } },
+      properties: {
+        url: { type: 'string' },
+        text: { type: 'string' },
+        html: { type: 'string' },
+      },
       required: ['url'],
       additionalProperties: false,
     } satisfies JSONSchema;
 
     factory.registerSchema('link', linkSchema);
 
-    const useCase = new CreateNodeUseCase(factory, mockRepository);
+    const useCase = new CreateNodeUseCase(
+      factory,
+      mockRepository,
+      mockCrawler
+    );
 
     const result = await useCase.execute({
       type: 'link',
@@ -98,9 +125,9 @@ describe('CreateNodeUseCase', () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.node.type).toBe('link');
-      expect(result.node.title).toBe('https://example.com');
-      expect(result.node.data.url).toBe('https://example.com');
+      expect(result.result.type).toBe('link');
+      expect(result.result.title).toBe('https://example.com');
+      expect(result.result.data.url).toBe('https://example.com');
     }
   });
 });

@@ -124,8 +124,11 @@ describe('PublishSiteUseCase', () => {
     const noteHtml = await fs.readFile(path.join(outputDir, 'nodes', `${note.id}.html`), 'utf8');
     expect(noteHtml).toContain('<pre>');
 
-    const linkHtml = await fs.readFile(path.join(outputDir, 'nodes', `${link.id}.html`), 'utf8');
-    expect(linkHtml).toContain('<a href="https://example.com"');
+    const linkHtml = await fs.readFile(
+      path.join(outputDir, 'nodes', `${link.id}.html`),
+      'utf8'
+    );
+    expect(linkHtml).toContain('<p>Example</p>');
 
     const tagHtml = await fs.readFile(
       path.join(outputDir, 'nodes', `${tag.id}.html`),
