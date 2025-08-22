@@ -24,7 +24,9 @@ class CreateNodeUseCase {
 
       if (type === 'link' && typeof data.url === 'string') {
         const crawled = await this.crawler.fetch(data.url);
-        data.text = crawled.text;
+        const text = crawled.markdown ? crawled.markdown : crawled.text;
+        data.text = text;
+        data.html = crawled.html;
         title = crawled.title ?? data.url;
       } else {
         title = title || this.ensureTitle(type, input.data);

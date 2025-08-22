@@ -83,7 +83,7 @@ export class CLI {
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
-        message: 'Make this node public?',
+        message: 'Make this node public (default: No)?',
         default: false,
       });
 
@@ -425,7 +425,7 @@ export class CLI {
           }),
         };
         const title = await input({
-          message: 'Enter URL title, or leave blank to use crawled title:',
+          message: 'Enter a title, or leave blank to use URL title:',
           default: '',
         });
         return { title, data };

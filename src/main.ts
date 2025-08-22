@@ -74,8 +74,12 @@ class Application {
 
     const linkSchema = {
       type: 'object',
-      properties: { url: { type: 'string' }, text: { type: 'string' } },
-      required: ['url', 'text'],
+      properties: {
+        url: { type: 'string' },
+        text: { type: 'string' },
+        html: { type: 'string' },
+      },
+      required: ['url', 'text', 'html'],
       additionalProperties: false,
     } satisfies JSONSchema;
 

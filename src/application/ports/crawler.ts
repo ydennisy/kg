@@ -3,6 +3,7 @@ type CrawlResult = {
   title: string | undefined;
   html: string | undefined;
   text: string | undefined;
+  markdown: string | undefined;
 };
 
 interface Crawler {
