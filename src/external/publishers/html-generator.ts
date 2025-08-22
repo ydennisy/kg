@@ -151,12 +151,13 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private renderNodeCard(node: Node): string {
+    const summary = this.getNodeSummary(node);
     return `
     <a href="nodes/${node.id}.html" class="node-card">
         <div class="node-type-badge">${node.type}</div>
         <h3>${this.getNodeTitle(node)}</h3>
         <p class="node-id">${node.id}</p>
-        <p>${this.getNodeSummary(node)}</p>
+        ${summary ? `<p>${summary}</p>` : ''}
     </a>`;
   }
 
@@ -247,9 +248,7 @@ export class HTMLGenerator implements SiteGenerator {
         }
         break;
       case 'flashcard':
-        if (this.isFlashcardData(node.data)) {
-          return `Q: ${node.data.front.slice(0, 100)}...`;
-        }
+        // Flashcards already use their title for the question, so no preview is needed
         break;
     }
     return '';
