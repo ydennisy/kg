@@ -98,7 +98,9 @@ describe('PublishSiteUseCase', () => {
   });
 
   test('generates correct HTML for each node type', async () => {
-    const note = factory.createNode('note', 'Note', true, { content: 'note content' });
+    const note = factory.createNode('note', 'Note', true, {
+      content: 'note content',
+    });
     const link = factory.createNode('link', 'My Link', true, {
       url: 'https://example.com',
       text: 'Example',
@@ -123,10 +125,14 @@ describe('PublishSiteUseCase', () => {
     expect(index).toContain('Tags');
     expect(index).toContain('Flashcards');
 
-    const noteHtml = await fs.readFile(path.join(outputDir, 'nodes', `${note.id}.html`), 'utf8');
+    const noteHtml = await fs.readFile(
+      path.join(outputDir, 'nodes', `${note.id}.html`),
+      'utf8'
+    );
     expect(noteHtml).toContain(`<h1>${note.title}</h1>`);
     expect(noteHtml).toContain(`<p class="node-id">${note.id}</p>`);
-    expect(noteHtml).toContain('<pre>');
+    expect(noteHtml).toContain('<div class="note-content">');
+    expect(noteHtml).toContain('<p>note content</p>');
 
     const linkHtml = await fs.readFile(
       path.join(outputDir, 'nodes', `${link.id}.html`),
@@ -143,6 +149,23 @@ describe('PublishSiteUseCase', () => {
     const flashHtml = await fs.readFile(path.join(outputDir, 'nodes', `${flashcard.id}.html`), 'utf8');
     expect(flashHtml).toContain('Front:');
     expect(flashHtml).toContain('Back:');
+  });
+
+  test('renders markdown content for note nodes', async () => {
+    const note = factory.createNode('note', 'MD Note', true, {
+      content: '# Title\n\nA **bold** move.',
+    });
+    await repository.save(note);
+
+    const useCase = new PublishSiteUseCase(repository, new HTMLGenerator(), outputDir);
+    await useCase.execute();
+
+    const html = await fs.readFile(
+      path.join(outputDir, 'nodes', `${note.id}.html`),
+      'utf8'
+    );
+    expect(html).toContain('<h1>Title</h1>');
+    expect(html).toContain('<p>A <strong>bold</strong> move.</p>');
   });
 
   test('escapes HTML special characters', async () => {
