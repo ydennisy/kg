@@ -92,6 +92,8 @@ describe('PublishSiteUseCase', () => {
     const index = await fs.readFile(path.join(outputDir, 'index.html'), 'utf8');
     expect(index).toContain('1 nodes published');
     expect(index).toContain(`nodes/${publicNote.id}.html`);
+    expect(index).toContain(publicNote.title);
+    expect(index).toContain(`<p class="node-id">${publicNote.id}</p>`);
     expect(index).not.toContain(privateNote.title);
   });
 
@@ -122,6 +124,8 @@ describe('PublishSiteUseCase', () => {
     expect(index).toContain('Flashcards');
 
     const noteHtml = await fs.readFile(path.join(outputDir, 'nodes', `${note.id}.html`), 'utf8');
+    expect(noteHtml).toContain(`<h1>${note.title}</h1>`);
+    expect(noteHtml).toContain(`<p class="node-id">${note.id}</p>`);
     expect(noteHtml).toContain('<pre>');
 
     const linkHtml = await fs.readFile(
