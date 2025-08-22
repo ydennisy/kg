@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "kg": "tsx src/main.ts",
+    "tui": "tsx src/tui.tsx",
     "build": "tsc",
     "test": "vitest",
     "format": "prettier --write .",
@@ -28,12 +29,18 @@
     "inquirer-autocomplete-standalone": "0.8.1",
     "jsdom": "26.1.0",
     "marked": "^16.2.0",
-    "ollama": "0.5.17"
+    "ollama": "0.5.17",
+    "ink": "6.2.2",
+    "ink-select-input": "6.2.0",
+    "ink-text-input": "6.0.0",
+    "react": "19.1.1"
   },
   "devDependencies": {
     "@dotenvx/dotenvx": "1.49.0",
     "@types/jsdom": "21.1.7",
     "@types/node": "24.2.1",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
     "drizzle-kit": "0.31.4",
     "prettier": "3.6.2",
     "tsx": "4.20.4",

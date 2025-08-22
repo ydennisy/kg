@@ -26,6 +26,7 @@
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true /* Avoid TS inserting synthetic exports; preserves ESM shape. */,
+    "jsx": "react-jsx",
 
     /* Interop & Module Hygiene */
     "esModuleInterop": true /* Smooth default import of CJS deps. */,
@@ -37,6 +38,6 @@
     "types": ["node", "vitest"] /* Include Node + Vitest globals for tests. */,
     "incremental": false /* Speeds up subsequent builds (creates .tsbuildinfo). */
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["dist", "node_modules"]
 }
