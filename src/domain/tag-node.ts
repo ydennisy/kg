@@ -1,36 +1,30 @@
 import { randomUUID } from 'node:crypto';
 
-type LinkNodeData = {
-  url: string;
-  crawled: {
-    title: string | undefined;
-    text: string | undefined;
-    html: string | undefined;
-  };
+type TagNodeData = {
+  name: string;
 };
 
-interface LinkNodeProps {
+interface TagNodeProps {
   id: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
   isPublic: boolean;
-  title: string | undefined;
-  data: LinkNodeData;
+  data: TagNodeData;
 }
 
-class LinkNode {
+class TagNode {
   readonly id: string;
-  readonly type: 'link';
+  readonly type: 'tag';
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly isPublic: boolean;
-  readonly data: LinkNodeData;
+  readonly data: TagNodeData;
 
-  constructor(input: LinkNodeProps) {
+  constructor(input: TagNodeProps) {
     this.id = input.id;
-    this.type = 'link';
+    this.type = 'tag';
     this.version = input.version;
     this.createdAt = input.createdAt;
     this.updatedAt = input.updatedAt;
@@ -38,27 +32,30 @@ class LinkNode {
     this.data = input.data;
   }
 
+  get title() {
+    return this.data.name;
+  }
+
   static create(input: {
     isPublic: boolean;
-    title?: string | undefined;
-    data: LinkNodeData;
-  }): LinkNode {
+    title?: string;
+    data: TagNodeData;
+  }): TagNode {
     const id = randomUUID();
     const now = new Date();
-    return new LinkNode({
+    return new TagNode({
       id,
       version: 1,
       createdAt: now,
       updatedAt: now,
       isPublic: input.isPublic,
-      title: input.title,
       data: input.data,
     });
   }
 
-  static hydrate(input: LinkNodeProps): LinkNode {
-    return new LinkNode(input);
+  static hydrate(input: TagNodeProps): TagNode {
+    return new TagNode(input);
   }
 }
 
-export { LinkNode };
+export { TagNode };

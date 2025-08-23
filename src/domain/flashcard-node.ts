@@ -1,36 +1,31 @@
 import { randomUUID } from 'node:crypto';
 
-type LinkNodeData = {
-  url: string;
-  crawled: {
-    title: string | undefined;
-    text: string | undefined;
-    html: string | undefined;
-  };
+type FlashcardNodeData = {
+  front: string;
+  back: string;
 };
 
-interface LinkNodeProps {
+interface FlashcardNodeProps {
   id: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
   isPublic: boolean;
-  title: string | undefined;
-  data: LinkNodeData;
+  data: FlashcardNodeData;
 }
 
-class LinkNode {
+class FlashcardNode {
   readonly id: string;
-  readonly type: 'link';
+  readonly type: 'flashcard';
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly isPublic: boolean;
-  readonly data: LinkNodeData;
+  readonly data: FlashcardNodeData;
 
-  constructor(input: LinkNodeProps) {
+  constructor(input: FlashcardNodeProps) {
     this.id = input.id;
-    this.type = 'link';
+    this.type = 'flashcard';
     this.version = input.version;
     this.createdAt = input.createdAt;
     this.updatedAt = input.updatedAt;
@@ -38,27 +33,30 @@ class LinkNode {
     this.data = input.data;
   }
 
+  get title() {
+    return this.data.front;
+  }
+
   static create(input: {
     isPublic: boolean;
-    title?: string | undefined;
-    data: LinkNodeData;
-  }): LinkNode {
+    title?: string;
+    data: FlashcardNodeData;
+  }): FlashcardNode {
     const id = randomUUID();
     const now = new Date();
-    return new LinkNode({
+    return new FlashcardNode({
       id,
       version: 1,
       createdAt: now,
       updatedAt: now,
       isPublic: input.isPublic,
-      title: input.title,
       data: input.data,
     });
   }
 
-  static hydrate(input: LinkNodeProps): LinkNode {
-    return new LinkNode(input);
+  static hydrate(input: FlashcardNodeProps): FlashcardNode {
+    return new FlashcardNode(input);
   }
 }
 
-export { LinkNode };
+export { FlashcardNode };

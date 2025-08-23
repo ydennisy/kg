@@ -1,51 +1,56 @@
 import { randomUUID } from 'node:crypto';
 
-type LinkNodeData = {
-  url: string;
-  crawled: {
-    title: string | undefined;
-    text: string | undefined;
-    html: string | undefined;
-  };
+type NoteNodeData = {
+  content: string;
 };
 
-interface LinkNodeProps {
+interface NoteNodeProps {
   id: string;
   version: number;
   createdAt: Date;
   updatedAt: Date;
   isPublic: boolean;
-  title: string | undefined;
-  data: LinkNodeData;
+  title: string;
+  data: NoteNodeData;
 }
 
-class LinkNode {
+class NoteNode {
   readonly id: string;
-  readonly type: 'link';
+  readonly type: 'note';
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly isPublic: boolean;
-  readonly data: LinkNodeData;
+  private _title: string;
+  private _data: NoteNodeData;
 
-  constructor(input: LinkNodeProps) {
+  constructor(input: NoteNodeProps) {
     this.id = input.id;
-    this.type = 'link';
+    this.type = 'note';
     this.version = input.version;
     this.createdAt = input.createdAt;
     this.updatedAt = input.updatedAt;
     this.isPublic = input.isPublic;
-    this.data = input.data;
+    this._title = input.title;
+    this._data = input.data;
+  }
+
+  get title() {
+    return this._title;
+  }
+
+  get content() {
+    return this._data.content;
   }
 
   static create(input: {
     isPublic: boolean;
-    title?: string | undefined;
-    data: LinkNodeData;
-  }): LinkNode {
+    title: string;
+    data: NoteNodeData;
+  }): NoteNode {
     const id = randomUUID();
     const now = new Date();
-    return new LinkNode({
+    return new NoteNode({
       id,
       version: 1,
       createdAt: now,
@@ -56,9 +61,9 @@ class LinkNode {
     });
   }
 
-  static hydrate(input: LinkNodeProps): LinkNode {
-    return new LinkNode(input);
+  static hydrate(input: NoteNodeProps): NoteNode {
+    return new NoteNode(input);
   }
 }
 
-export { LinkNode };
+export { NoteNode };

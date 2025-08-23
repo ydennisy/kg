@@ -1,62 +1,84 @@
-import { NodeFactory } from '../../domain/node-factory.js';
+import { FlashcardNode } from '../../domain/flashcard-node.js';
+import { LinkNode } from '../../domain/link-node.js';
+import { NoteNode } from '../../domain/note-node.js';
+import { TagNode } from '../../domain/tag-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
-import type { NodeType } from '../../domain/node.js';
+import type { AnyNode, NodeType } from '../../domain/node.js';
 import type { Crawler } from '../ports/crawler.js';
 
-type CreateNodeInput<T extends Record<string, unknown>> = {
-  type: NodeType;
-  title?: string | undefined;
-  isPublic?: boolean;
-  data: T;
-};
+type CreateNodeInput =
+  | {
+      type: 'flashcard';
+      title?: string | undefined;
+      isPublic: boolean;
+      data: { front: string; back: string };
+    }
+  | {
+      type: 'link';
+      title?: string | undefined;
+      isPublic: boolean;
+      data: { url: string };
+    }
+  | {
+      type: 'note';
+      title: string;
+      isPublic: boolean;
+      data: { content: string };
+    }
+  | {
+      type: 'tag';
+      isPublic: boolean;
+      data: { name: string };
+    };
 
 class CreateNodeUseCase {
   constructor(
-    private readonly factory: NodeFactory,
     private readonly repository: NodeRepository,
     private readonly crawler: Crawler
   ) {}
 
-  async execute<T extends Record<string, unknown>>(input: CreateNodeInput<T>) {
+  async execute(input: CreateNodeInput) {
     try {
-      let { title } = input;
+      let node: AnyNode;
+
       const { type, isPublic, data } = input;
 
-      if (type === 'link' && typeof data.url === 'string') {
-        const crawled = await this.crawler.fetch(data.url);
-        const text = crawled.markdown ? crawled.markdown : crawled.text;
-        data.text = text;
-        data.html = crawled.html;
-        title = crawled.title ?? data.url;
-      } else {
-        title = title || this.ensureTitle(type, input.data);
+      switch (type) {
+        case 'flashcard':
+          node = FlashcardNode.create({ isPublic, data });
+          break;
+
+        case 'link':
+          const { url } = data;
+          const crawled = await this.crawler.fetch(url);
+          node = LinkNode.create({
+            isPublic,
+            title: input.title,
+            data: {
+              url,
+              title: crawled.title,
+              text: crawled.markdown ? crawled.markdown : crawled.text,
+              html: crawled.html,
+            },
+          });
+          break;
+
+        case 'note':
+          node = NoteNode.create({ isPublic, title: input.title, data });
+          break;
+
+        case 'tag':
+          node = TagNode.create({ isPublic, data });
+          break;
+
+        default:
+          throw new Error(`unknown node type: ${type}`);
       }
 
-      const node = this.factory.createNode(
-        type,
-        title,
-        isPublic ?? false,
-        data
-      );
       await this.repository.save(node);
       return { ok: true as const, result: node };
     } catch (err) {
       return { ok: false as const, error: (err as Error).message };
-    }
-  }
-
-  private ensureTitle(type: NodeType, data: Record<string, unknown>): string {
-    switch (type) {
-      case 'note':
-        return 'Untitled Note';
-      case 'link':
-        return (data.url as string) || 'Untitled Link';
-      case 'tag':
-        return data.name as string;
-      case 'flashcard':
-        return data.front as string;
-      default:
-        return 'Untitled';
     }
   }
 }
