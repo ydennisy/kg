@@ -1,5 +1,5 @@
 import { marked } from 'marked';
-import type { Node } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/node.js';
 import type {
   SiteGenerator,
   SiteFile,
@@ -7,7 +7,11 @@ import type {
 
 interface LinkData {
   url: string;
-  html?: string;
+  crawled: {
+    title: string | undefined;
+    text: string | undefined;
+    html: string | undefined;
+  };
 }
 
 interface FlashcardData {
@@ -20,7 +24,7 @@ interface ContentData {
 }
 
 export class HTMLGenerator implements SiteGenerator {
-  public async generate(nodes: Node[]): Promise<SiteFile[]> {
+  public async generate(nodes: AnyNode[]): Promise<SiteFile[]> {
     const files: SiteFile[] = [];
 
     // Generate index page
@@ -47,6 +51,9 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private escapeHtml(text: string): string {
+    if (text === undefined || text === null) {
+      return '';
+    }
     const map: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
@@ -71,7 +78,7 @@ export class HTMLGenerator implements SiteGenerator {
     return data && typeof data.content === 'string';
   }
 
-  private generateIndex(nodes: Node[]): string {
+  private generateIndex(nodes: AnyNode[]): string {
     const nodesByType = nodes.reduce(
       (acc, node) => {
         if (!acc[node.type]) {
@@ -80,7 +87,7 @@ export class HTMLGenerator implements SiteGenerator {
         acc[node.type]!.push(node);
         return acc;
       },
-      {} as Record<string, Node[]>
+      {} as Record<string, AnyNode[]>
     );
 
     return `<!DOCTYPE html>
@@ -115,7 +122,7 @@ export class HTMLGenerator implements SiteGenerator {
 </html>`;
   }
 
-  private generateNodePage(node: Node, allNodes: Node[]): string {
+  private generateNodePage(node: AnyNode, allNodes: AnyNode[]): string {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,7 +157,7 @@ export class HTMLGenerator implements SiteGenerator {
 </html>`;
   }
 
-  private renderNodeCard(node: Node): string {
+  private renderNodeCard(node: AnyNode): string {
     const summary = this.getNodeSummary(node);
     return `
     <a href="nodes/${node.id}.html" class="node-card">
@@ -161,90 +168,111 @@ export class HTMLGenerator implements SiteGenerator {
     </a>`;
   }
 
-  private renderNodeContent(node: Node): string {
+  private renderNodeContent(node: AnyNode): string {
     switch (node.type) {
       case 'note':
-        if (this.isContentData(node.data)) {
-          const html = marked.parse(this.escapeHtml(node.data.content));
+        const content = (node as any).content;
+        if (content && typeof content === 'string') {
+          const html = marked.parse(this.escapeHtml(content));
           return `
         <div class="note-content">
             ${html}
         </div>`;
         }
         break;
+
       case 'link':
-        if (this.isLinkData(node.data)) {
-          if (node.data.html) {
+        const linkData = (node as any).data;
+        if (linkData && linkData.url) {
+          if (linkData.crawled && linkData.crawled.html) {
             return `
         <div class="link-content">
-            ${node.data.html}
+            ${linkData.crawled.html}
         </div>`;
           }
           return `
         <div class="link-content">
             <a href="${this.escapeHtml(
-              node.data.url
+              linkData.url
             )}" target="_blank" rel="noopener">
-                ${this.escapeHtml(node.data.url)}
+                ${this.escapeHtml(linkData.url)}
             </a>
         </div>`;
         }
         break;
 
       case 'flashcard':
-        if (this.isFlashcardData(node.data)) {
+        const flashcardData = (node as any).data;
+        if (flashcardData && flashcardData.front && flashcardData.back) {
           return `
         <div class="flashcard-content">
             <div class="flashcard-front">
-                <strong>Front:</strong> ${this.escapeHtml(node.data.front)}
+                <strong>Front:</strong> ${this.escapeHtml(flashcardData.front)}
             </div>
             <div class="flashcard-back">
-                <strong>Back:</strong> ${this.escapeHtml(node.data.back)}
+                <strong>Back:</strong> ${this.escapeHtml(flashcardData.back)}
             </div>
+        </div>`;
+        }
+        break;
+
+      case 'tag':
+        const tagData = (node as any).data;
+        if (tagData && tagData.name) {
+          return `
+        <div class="tag-content">
+            <p>Tag: <strong>${this.escapeHtml(tagData.name)}</strong></p>
         </div>`;
         }
         break;
     }
 
     // Fallback for invalid data
-    return `<pre>${this.escapeHtml(JSON.stringify(node.data, null, 2))}</pre>`;
+    return `<pre>${this.escapeHtml('No content available')}</pre>`;
   }
 
-  private renderRelatedNodes(node: Node, allNodes: Node[]): string {
+  private renderRelatedNodes(node: AnyNode, allNodes: AnyNode[]): string {
     // TODO: Implement relationship discovery via tag nodes when tag relationships are implemented
     return '';
   }
 
-  private getNodeTitle(node: Node): string {
-    if (node.title && node.title.trim().length > 0) {
+  private getNodeTitle(node: AnyNode): string {
+    if (
+      node.title &&
+      typeof node.title === 'string' &&
+      node.title.trim().length > 0
+    ) {
       return this.escapeHtml(node.title);
     }
 
     // Fallback to previous heuristics if title is missing
     switch (node.type) {
       case 'link':
-        if (this.isLinkData(node.data)) {
+        const linkData = (node as any).data;
+        if (linkData && linkData.url) {
           try {
-            return new URL(node.data.url).hostname;
+            return new URL(linkData.url).hostname;
           } catch {
-            return node.data.url.slice(0, 50);
+            return linkData.url.slice(0, 50);
           }
         }
         break;
       case 'flashcard':
-        if (this.isFlashcardData(node.data)) {
-          return node.data.front.slice(0, 50);
+        const flashcardData = (node as any).data;
+        if (flashcardData && flashcardData.front) {
+          return flashcardData.front.slice(0, 50);
         }
         break;
     }
     return node.id.slice(0, 8);
   }
 
-  private getNodeSummary(node: Node): string {
+  private getNodeSummary(node: AnyNode): string {
     switch (node.type) {
       case 'link':
-        if (this.isLinkData(node.data)) {
-          return node.data.url;
+        const linkData = (node as any).data;
+        if (linkData && linkData.url) {
+          return linkData.url;
         }
         break;
       case 'flashcard':
