@@ -4,7 +4,7 @@ import type { NodeRecord } from '../external/database/schema.js';
 class NodeMapper {
   public toDomain(record: NodeRecord): AnyNode {}
 
-  public toPersistence(node: AnyNode): NodeRecord {
+  public toRecord(node: AnyNode): NodeRecord {
     return {
       id: node.id,
       type: node.type,
