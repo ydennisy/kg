@@ -27,6 +27,7 @@ class LinkNode {
   readonly updatedAt: Date;
   readonly isPublic: boolean;
   readonly data: LinkNodeData;
+  private _title: string | undefined;
 
   constructor(input: LinkNodeProps) {
     this.id = input.id;
@@ -36,6 +37,11 @@ class LinkNode {
     this.updatedAt = input.updatedAt;
     this.isPublic = input.isPublic;
     this.data = input.data;
+    this._title = input.title;
+  }
+
+  get title() {
+    return this._title || this.data.crawled.title || this.data.url;
   }
 
   static create(input: {
