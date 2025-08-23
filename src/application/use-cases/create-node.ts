@@ -56,9 +56,11 @@ class CreateNodeUseCase {
             title: input.title,
             data: {
               url,
-              title: crawled.title,
-              text: crawled.markdown ? crawled.markdown : crawled.text,
-              html: crawled.html,
+              crawled: {
+                title: crawled.title,
+                text: crawled.markdown ? crawled.markdown : crawled.text,
+                html: crawled.html,
+              },
             },
           });
           break;

@@ -7,7 +7,8 @@ import type {
   NodeRepository,
   SearchResult,
 } from '../../application/ports/node-repository.js';
-import type { Node, EdgeType } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/node.js';
+import type { EdgeType } from '../../domain/edge.js';
 
 export class SqlNodeRepository implements NodeRepository {
   constructor(
@@ -15,11 +16,11 @@ export class SqlNodeRepository implements NodeRepository {
     private mapper: NodeMapper
   ) {}
 
-  async save(node: Node): Promise<void> {
+  async save(node: AnyNode): Promise<void> {
     // const edges = node.edges;
 
     const { id, type, title, isPublic, createdAt, updatedAt, data } =
-      this.mapper.toPersistence(node);
+      this.mapper.toRecord(node);
 
     // TODO: figure out why adding a transactions throws an error that no table exists
     await this.db.insert(nodesTable).values({
@@ -44,12 +45,12 @@ export class SqlNodeRepository implements NodeRepository {
     });
   }
 
-  async findAll(): Promise<Node[]> {
+  async findAll(): Promise<AnyNode[]> {
     const nodes = await this.db.select().from(nodesTable);
     return nodes.map((node) => this.mapper.toDomain(node));
   }
 
-  async findById(id: string): Promise<Node | null> {
+  async findById(id: string): Promise<AnyNode | null> {
     // TODO: read up on the different query syntax Drizzle offers
     const node = await this.db.query.nodesTable.findFirst({
       where: eq(nodesTable.id, id),

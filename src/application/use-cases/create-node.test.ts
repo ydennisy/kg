@@ -2,9 +2,10 @@ import { describe, test, expect } from 'vitest';
 import { CreateNodeUseCase } from './create-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Crawler } from '../ports/crawler.js';
+import type { AnyNode } from '../../domain/node.js';
 
 const mockRepository: NodeRepository = {
-  save: async (node: Node) => Promise.resolve(),
+  save: async (node: AnyNode) => Promise.resolve(),
   findById: async (id: string) => Promise.resolve(null),
   findAll: async () => Promise.resolve([]),
   search: async (query: string) => Promise.resolve([]),

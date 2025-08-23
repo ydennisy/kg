@@ -1,16 +1,17 @@
-import type { Node, EdgeType } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/node.js';
+import type { EdgeType } from '../../domain/edge.js';
 
 type SearchResult = {
-  node: Node;
+  node: AnyNode;
   snippet: string;
   score: number;
 };
 
 interface NodeRepository {
-  save(node: Node): Promise<void>;
+  save(node: AnyNode): Promise<void>;
   link(sourceId: string, targetId: string, type?: EdgeType): Promise<void>;
-  findAll(): Promise<Node[]>;
-  findById(id: string): Promise<Node | null>;
+  findAll(): Promise<AnyNode[]>;
+  findById(id: string): Promise<AnyNode | null>;
   search(query: string): Promise<SearchResult[]>;
 }
 
