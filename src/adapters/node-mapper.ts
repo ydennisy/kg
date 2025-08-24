@@ -129,7 +129,10 @@ const mappers = {
         createdAt: new Date(record.createdAt),
         updatedAt: new Date(record.updatedAt),
         isPublic: record.isPublic,
-        data: { name: record.tagNode.name },
+        data: {
+          name: record.tagNode.name,
+          description: record.tagNode.description,
+        },
       }),
     toTypeRecord: (node: TagNode): Omit<TagNodeRecord, 'nodeId'> => ({
       name: node.data.name,

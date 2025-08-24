@@ -2,6 +2,7 @@ import type { NodeRepository, SearchResult } from '../ports/node-repository.js';
 
 type SearchNodesInput = {
   query: string;
+  withRelations?: boolean;
 };
 
 class SearchNodesUseCase {
@@ -13,7 +14,10 @@ class SearchNodesUseCase {
     { ok: true; result: Array<SearchResult> } | { ok: false; error: string }
   > {
     try {
-      const result = await this.repository.search(input.query);
+      const result = await this.repository.search(
+        input.query,
+        input.withRelations
+      );
       return { ok: true, result };
     } catch (err) {
       return { ok: false, error: (err as Error).message };

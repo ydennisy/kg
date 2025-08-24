@@ -222,6 +222,7 @@ export class HTMLGenerator implements SiteGenerator {
           return `
         <div class="tag-content">
             <p>Tag: <strong>${this.escapeHtml(tagData.name)}</strong></p>
+            ${tagData.description ? `<p>${this.escapeHtml(tagData.description)}</p>` : ''}
         </div>`;
         }
         break;

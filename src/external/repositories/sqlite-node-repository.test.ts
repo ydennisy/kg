@@ -162,6 +162,29 @@ describe('SqliteNodeRepository', () => {
     expect(results.length).toBe(0);
   });
 
+  test('search with relations returns related nodes', async () => {
+    const parent = NoteNode.create({
+      title: 'Parent',
+      isPublic: false,
+      data: { content: 'Parent node' },
+    });
+    const child = NoteNode.create({
+      title: 'Child',
+      isPublic: false,
+      data: { content: 'Child node' },
+    });
+
+    await repository.save(parent);
+    await repository.save(child);
+    await searchIndex.indexNode(parent);
+    await searchIndex.indexNode(child);
+    await repository.link(parent.id, child.id, 'contains', false);
+
+    const results = await repository.search('Parent', true);
+    expect(results[0]?.node.relatedNodes).toHaveLength(1);
+    expect(results[0]?.node.relatedNodes[0]?.node.id).toBe(child.id);
+  });
+
   test('bidirectional relationships are retrieved', async () => {
     const first = NoteNode.create({
       title: 'First',

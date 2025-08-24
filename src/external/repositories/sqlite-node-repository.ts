@@ -201,7 +201,10 @@ class SqliteNodeRepository implements NodeRepository {
     return node;
   }
 
-  async search(query: string): Promise<SearchResult[]> {
+  async search(
+    query: string,
+    withRelations: boolean = false
+  ): Promise<SearchResult[]> {
     if (!query.trim()) {
       return [];
     }
@@ -214,7 +217,13 @@ class SqliteNodeRepository implements NodeRepository {
       .join(' ');
 
     // Uses FTS5 with BM25 scoring
-    const results = await this.db.all(sql`
+    const rows = await this.db.all<{
+      id: string;
+      type: NodeType;
+      title: string;
+      score: number;
+      snippet: string;
+    }>(sql`
       SELECT DISTINCT
         n.id,
         n.type,
@@ -222,7 +231,7 @@ class SqliteNodeRepository implements NodeRepository {
         rank AS score,
         snippet(nodes_fts, -1, '<b>', '</b>', '…', 20) AS snippet
       FROM nodes_fts
-      JOIN nodes n 
+      JOIN nodes n
         ON n.id = nodes_fts.id
       WHERE nodes_fts MATCH ${q}
         AND rank MATCH 'bm25(0.0, 5.0, 1.0)'
@@ -230,10 +239,77 @@ class SqliteNodeRepository implements NodeRepository {
       LIMIT 25
     `);
 
-    return results.map((row: any) => ({
-      nodeId: row.id,
-      type: row.type,
-      title: row.title,
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const nodeRecords = await this.db.query.nodesTable.findMany({
+      where: inArray(
+        nodesTable.id,
+        rows.map((r) => r.id)
+      ),
+      with: {
+        noteNode: true,
+        linkNode: true,
+        tagNode: true,
+        flashcardNode: true,
+      },
+    });
+
+    const nodeMap = new Map<string, AnyNode>();
+    for (const record of nodeRecords) {
+      nodeMap.set(record.id, this.mapper.toDomain(record));
+    }
+
+    if (withRelations) {
+      for (const node of nodeMap.values()) {
+        const edges = await this.db.query.edgesTable.findMany({
+          where: or(eq(edgesTable.fromId, node.id), eq(edgesTable.toId, node.id)),
+        });
+
+        if (edges.length === 0) continue;
+
+        const relatedIds = edges.map((e) =>
+          e.fromId === node.id ? e.toId : e.fromId
+        );
+
+        const relatedRecords = await this.db.query.nodesTable.findMany({
+          where: inArray(nodesTable.id, relatedIds),
+          with: {
+            noteNode: true,
+            linkNode: true,
+            tagNode: true,
+            flashcardNode: true,
+          },
+        });
+
+        const relatedMap = new Map();
+        for (const edge of edges) {
+          const relatedRecord = relatedRecords.find(
+            (n) => n.id === (edge.fromId === node.id ? edge.toId : edge.fromId)
+          );
+          if (relatedRecord) {
+            const relatedNode = this.mapper.toDomain(relatedRecord);
+            relatedMap.set(relatedNode.id, {
+              node: relatedNode,
+              relationship: {
+                type: edge.type,
+                direction: edge.isBidirectional
+                  ? 'both'
+                  : edge.fromId === node.id
+                    ? 'from'
+                    : 'to',
+              },
+            });
+          }
+        }
+
+        node.setRelatedNodes(relatedMap);
+      }
+    }
+
+    return rows.map((row) => ({
+      node: nodeMap.get(row.id)!,
       snippet: row.snippet,
       score: Number(row.score),
     }));
