@@ -145,19 +145,34 @@ export class CLI {
         if (!query) {
           return [];
         }
-        const result = await this.searchNodesUseCase.execute({ query });
+        const result = await this.searchNodesUseCase.execute({
+          query,
+          withRelations: true,
+        });
         if (!result.ok) {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ nodeId, type, title, score, snippet }) => {
+        return result.result.map(({ node, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
+          const relatedPreview = node.relatedNodes
+            .slice(0, 3)
+            .map(
+              ({ node: r, relationship }) =>
+                `→ ${r.title} (${relationship.type})`
+            )
+            .join(', ');
+          const description = relatedPreview
+            ? `${highlightedSnippet}\n${relatedPreview}`
+            : `${highlightedSnippet}`;
           return {
-            value: nodeId,
-            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
-            description: `${highlightedSnippet}`,
+            value: node.id,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(
+              2
+            )})`,
+            description,
           };
         });
       },
@@ -192,13 +207,15 @@ export class CLI {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ nodeId, type, title, score, snippet }) => {
+        return result.result.map(({ node, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
           return {
-            value: nodeId,
-            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
+            value: node.id,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(
+              2
+            )})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -547,8 +564,8 @@ export class CLI {
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(
-              ({ nodeId }) =>
-                nodeId !== newNodeId && !selectedNodes.includes(nodeId)
+              ({ node }) =>
+                node.id !== newNodeId && !selectedNodes.includes(node.id)
             );
 
             if (filteredResults.length === 0) {
@@ -561,21 +578,19 @@ export class CLI {
               ];
             }
 
-            return filteredResults.map(
-              ({ nodeId, type, title, score, snippet }) => {
-                // Use snippet for preview instead of fetching full node data
-                const snippetPreview =
-                  snippet
-                    .replace(/<b>/g, '')
-                    .replace(/<\/b>/g, '')
-                    .substring(0, 50) + (snippet.length > 50 ? '...' : '');
+            return filteredResults.map(({ node, score, snippet }) => {
+              // Use snippet for preview instead of fetching full node data
+              const snippetPreview =
+                snippet
+                  .replace(/<b>/g, '')
+                  .replace(/<\/b>/g, '')
+                  .substring(0, 50) + (snippet.length > 50 ? '...' : '');
 
-                return {
-                  name: `[${type.toUpperCase()}] ${title} - ${snippetPreview} (Score: ${score.toFixed(2)})`,
-                  value: nodeId,
-                };
-              }
-            );
+              return {
+                name: `[${node.type.toUpperCase()}] ${node.title} - ${snippetPreview} (Score: ${score.toFixed(2)})`,
+                value: node.id,
+              };
+            });
           },
         });
 

@@ -1,9 +1,7 @@
-import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
+import type { AnyNode, EdgeType } from '../../domain/types.js';
 
 type SearchResult = {
-  nodeId: string;
-  type: NodeType;
-  title: string;
+  node: AnyNode;
   snippet: string;
   score: number;
 };
@@ -18,7 +16,7 @@ interface NodeRepository {
   ): Promise<void>;
   findAll(): Promise<AnyNode[]>;
   findById(id: string, withRelations?: boolean): Promise<AnyNode | null>;
-  search(query: string): Promise<SearchResult[]>;
+  search(query: string, withRelations?: boolean): Promise<SearchResult[]>;
 }
 
 export type { NodeRepository, SearchResult };
