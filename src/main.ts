@@ -11,6 +11,8 @@ import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
 import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
 import { GenerateFlashcardsUseCase } from './application/use-cases/generate-flashcards.js';
+import { GetDueFlashcardsUseCase } from './application/use-cases/get-due-flashcards.js';
+import { ReviewFlashcardUseCase } from './application/use-cases/review-flashcard.js';
 import { SqliteSearchIndex } from './external/search-index/sqlite-search-index.js';
 
 class Application {
@@ -46,13 +48,17 @@ class Application {
       htmlGenerator,
       './public'
     );
+    const getDueFlashcards = new GetDueFlashcardsUseCase(nodeRepository);
+    const reviewFlashcard = new ReviewFlashcardUseCase(nodeRepository);
     this.cli = new CLI(
       createNode,
       linkNodes,
       searchNodes,
       getNode,
       generateFlashcards,
-      publishSite
+      publishSite,
+      getDueFlashcards,
+      reviewFlashcard
     );
   }
 

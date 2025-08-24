@@ -71,6 +71,7 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
     //   const isDone =
     //     response?.message?.content?.trim().toUpperCase() === 'DONE';
 
+
     //   if (
     //     (!response.message?.tool_calls ||
     //       response.message.tool_calls.length === 0) &&
