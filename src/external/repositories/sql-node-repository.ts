@@ -14,8 +14,7 @@ import type {
   NodeRepository,
   SearchResult,
 } from '../../application/ports/node-repository.js';
-import type { AnyNode } from '../../domain/types.js';
-import type { EdgeType } from '../../domain/edge.js';
+import type { AnyNode, EdgeType } from '../../domain/types.js';
 
 export class SqlNodeRepository implements NodeRepository {
   constructor(
