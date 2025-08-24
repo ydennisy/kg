@@ -1,9 +1,13 @@
-import { describe, test, beforeEach, expect } from 'vitest';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
-import { SqlNodeRepository } from './sql-node-repository.js';
+import { SqlNodeRepository } from './sqlite-node-repository.js';
 import {
   createDatabaseClient,
   type DatabaseClient,
@@ -33,13 +37,23 @@ const nodes = [
 describe('SQLNodeRepository', () => {
   let db: DatabaseClient;
   let repository: SqlNodeRepository;
+  let dbFile: string;
 
   beforeEach(async () => {
-    db = createDatabaseClient(':memory:');
+    // Use a temp file vs in memory to allow for transactions to work
+    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
+    db = createDatabaseClient(`file:${dbFile}`);
     await migrate(db, { migrationsFolder: './drizzle' });
 
     const mapper = new NodeMapper();
     repository = new SqlNodeRepository(db, mapper);
+  });
+
+  afterEach(async () => {
+    // best-effort cleanup
+    try {
+      await fs.unlink(dbFile);
+    } catch {}
   });
 
   test('node is saved', async () => {

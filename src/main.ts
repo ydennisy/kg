@@ -1,5 +1,5 @@
 import { createDatabaseClient } from './external/database/client.js';
-import { SqlNodeRepository } from './external/repositories/sql-node-repository.js';
+import { SqlNodeRepository } from './external/repositories/sqlite-node-repository.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
 import { HTTPCrawler } from './external/crawlers/http-crawler.js';

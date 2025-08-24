@@ -23,28 +23,26 @@ export class SqlNodeRepository implements NodeRepository {
   ) {}
 
   async save(node: AnyNode): Promise<void> {
-    const { nodeRecord, typeRecord } = this.mapper.toRecords(node);
+    const bundle = this.mapper.toRecords(node);
 
-    // Insert into master nodes table
-    await this.db.insert(nodesTable).values(nodeRecord);
+    await this.db.transaction(async (tx) => {
+      await tx.insert(nodesTable).values(bundle.nodeRecord);
 
-    // Insert into appropriate type table
-    switch (node.type) {
-      case 'note':
-        await this.db.insert(noteNodesTable).values(typeRecord);
-        break;
-      case 'link':
-        await this.db.insert(linkNodesTable).values(typeRecord);
-        break;
-      case 'tag':
-        await this.db.insert(tagNodesTable).values(typeRecord);
-        break;
-      case 'flashcard':
-        await this.db.insert(flashcardNodesTable).values(typeRecord);
-        break;
-      default:
-        throw new Error(`Unknown node type: ${node.type}`);
-    }
+      switch (bundle.type) {
+        case 'note':
+          await tx.insert(noteNodesTable).values(bundle.typeRecord);
+          break;
+        case 'link':
+          await tx.insert(linkNodesTable).values(bundle.typeRecord);
+          break;
+        case 'tag':
+          await tx.insert(tagNodesTable).values(bundle.typeRecord);
+          break;
+        case 'flashcard':
+          await tx.insert(flashcardNodesTable).values(bundle.typeRecord);
+          break;
+      }
+    });
   }
 
   // TODO: this is temporary helper to add edges until it is handled properly in the domain
@@ -105,10 +103,6 @@ export class SqlNodeRepository implements NodeRepository {
         n.id,
         n.type,
         n.title,
-        n.version,
-        n.is_public,
-        n.created_at,
-        n.updated_at,
         rank AS score,
         snippet(nodes_fts, -1, '<b>', '</b>', '…', 20) AS snippet
       FROM nodes_fts

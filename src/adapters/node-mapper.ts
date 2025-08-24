@@ -40,7 +40,7 @@ type TypeRecordMap = {
   flashcard: FlashcardNodeRecord;
 };
 
-// A fully type-safe MapperConfig using our lookup maps
+// A fully type-safe MapperConfig using lookup maps
 type MapperConfig = {
   [T in NodeType]: {
     toDomain: (record: NodeRecordMap[T]) => NodeEntityMap[T];
@@ -48,8 +48,18 @@ type MapperConfig = {
   };
 };
 
+type InsertBundle =
+  | { type: 'note'; nodeRecord: NodeRecord; typeRecord: NoteNodeRecord }
+  | { type: 'link'; nodeRecord: NodeRecord; typeRecord: LinkNodeRecord }
+  | { type: 'tag'; nodeRecord: NodeRecord; typeRecord: TagNodeRecord }
+  | {
+      type: 'flashcard';
+      nodeRecord: NodeRecord;
+      typeRecord: FlashcardNodeRecord;
+    };
+
 // --- Static Mapper Configuration ---
-const mappers: MapperConfig = {
+const mappers = {
   note: {
     toDomain: (record: NodeWithNoteRecord) =>
       NoteNode.hydrate({
@@ -73,21 +83,21 @@ const mappers: MapperConfig = {
         createdAt: new Date(record.createdAt),
         updatedAt: new Date(record.updatedAt),
         isPublic: record.isPublic,
-        title: record.title || undefined,
+        title: record.title ?? undefined,
         data: {
           url: record.linkNode.url,
           crawled: {
-            title: record.linkNode.crawledTitle || undefined,
-            text: record.linkNode.crawledText || undefined,
-            html: record.linkNode.crawledHtml || undefined,
+            title: record.linkNode.crawledTitle ?? undefined,
+            text: record.linkNode.crawledText ?? undefined,
+            html: record.linkNode.crawledHtml ?? undefined,
           },
         },
       }),
     toTypeRecord: (node: LinkNode): Omit<LinkNodeRecord, 'nodeId'> => ({
       url: node.data.url,
-      crawledTitle: node.data.crawled.title || null,
-      crawledText: node.data.crawled.text || null,
-      crawledHtml: node.data.crawled.html || null,
+      crawledTitle: node.data.crawled.title ?? null,
+      crawledText: node.data.crawled.text ?? null,
+      crawledHtml: node.data.crawled.html ?? null,
     }),
   },
   tag: {
@@ -124,7 +134,7 @@ const mappers: MapperConfig = {
       back: node.data.back,
     }),
   },
-};
+} satisfies MapperConfig;
 
 class NodeMapper {
   public toDomain(record: AnyNodeRecord): AnyNode {
@@ -141,18 +151,11 @@ class NodeMapper {
       return mappers.flashcard.toDomain(record);
     }
 
-    const exhaustiveCheck: never = record;
-    throw new Error(`Unknown node type: ${exhaustiveCheck}`);
+    const neverCheck: never = record;
+    throw new Error(`Unknown node type: ${neverCheck}`);
   }
 
-  public toRecords(node: AnyNode): {
-    nodeRecord: NodeRecord;
-    typeRecord:
-      | NoteNodeRecord
-      | LinkNodeRecord
-      | TagNodeRecord
-      | FlashcardNodeRecord;
-  } {
+  public toRecords(node: AnyNode): InsertBundle {
     const nodeRecord: NodeRecord = {
       id: node.id,
       type: node.type,
@@ -173,27 +176,37 @@ class NodeMapper {
 
     switch (node.type) {
       case 'note':
-        typeRecord = { nodeId: node.id, ...mappers.note.toTypeRecord(node) };
-        break;
-      case 'link':
-        typeRecord = { nodeId: node.id, ...mappers.link.toTypeRecord(node) };
-        break;
-      case 'tag':
-        typeRecord = { nodeId: node.id, ...mappers.tag.toTypeRecord(node) };
-        break;
-      case 'flashcard':
-        typeRecord = {
-          nodeId: node.id,
-          ...mappers.flashcard.toTypeRecord(node),
+        return {
+          type: 'note',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.note.toTypeRecord(node) },
         };
-        break;
+      case 'link':
+        return {
+          type: 'link',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.link.toTypeRecord(node) },
+        };
+      case 'tag':
+        return {
+          type: 'tag',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.tag.toTypeRecord(node) },
+        };
+      case 'flashcard':
+        return {
+          type: 'flashcard',
+          nodeRecord,
+          typeRecord: {
+            nodeId: node.id,
+            ...mappers.flashcard.toTypeRecord(node),
+          },
+        };
       default:
         // This ensures we handle all cases, satisfying TypeScript's exhaustiveness check.
-        const exhaustiveCheck: never = node;
-        throw new Error(`Unhandled node type: ${exhaustiveCheck}`);
+        const neverCheck: never = node;
+        throw new Error(`Unhandled node type: ${neverCheck}`);
     }
-
-    return { nodeRecord, typeRecord };
   }
 
   private isNoteRecord(record: AnyNodeRecord): record is NodeWithNoteRecord {

@@ -1,8 +1,9 @@
-import type { AnyNode } from '../../domain/types.js';
-import type { EdgeType } from '../../domain/edge.js';
+import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
 
 type SearchResult = {
-  node: AnyNode;
+  nodeId: string;
+  type: NodeType;
+  title: string;
   snippet: string;
   score: number;
 };

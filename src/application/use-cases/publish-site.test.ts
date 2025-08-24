@@ -9,7 +9,7 @@ import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';
 import { TagNode } from '../../domain/tag-node.js';
 import { FlashcardNode } from '../../domain/flashcard-node.js';
-import { SqlNodeRepository } from '../../external/repositories/sql-node-repository.js';
+import { SqlNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
 import { HTMLGenerator } from '../../external/publishers/html-generator.js';
 import { PublishSiteUseCase } from './publish-site.js';
 import {
