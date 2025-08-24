@@ -65,7 +65,7 @@ class SqliteNodeRepository implements NodeRepository {
       },
     });
 
-    return results.map((result) => this.mapper.toDomain(result as any));
+    return results.map((result) => this.mapper.toDomain(result));
   }
 
   async findById(id: string): Promise<AnyNode | null> {
@@ -81,7 +81,7 @@ class SqliteNodeRepository implements NodeRepository {
 
     if (!result) return null;
 
-    return this.mapper.toDomain(result as any);
+    return this.mapper.toDomain(result);
   }
 
   async search(query: string): Promise<SearchResult[]> {
