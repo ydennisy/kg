@@ -3,17 +3,34 @@ import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
 import type { NodeType } from '../../domain/types.js';
-import type {
-  CreateNodeUseCase,
-  CreateNodeInput,
-} from '../../application/use-cases/create-node.js';
+import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
-import { desc } from 'drizzle-orm';
+
+// TODO: we should not need to duplicate this type
+type NodeInputData =
+  | {
+      type: 'flashcard';
+      data: { front: string; back: string };
+    }
+  | {
+      type: 'link';
+      title: string | undefined;
+      data: { url: string };
+    }
+  | {
+      type: 'note';
+      title: string;
+      data: { content: string };
+    }
+  | {
+      type: 'tag';
+      data: { name: string; description?: string };
+    };
 
 export class CLI {
   private program: Command;
@@ -401,9 +418,7 @@ export class CLI {
     return selectedFlashcards;
   }
 
-  private async collectNodeInput(
-    nodeType: NodeType
-  ): Promise<Omit<CreateNodeInput, 'isPublic'>> {
+  private async collectNodeInput(nodeType: NodeType): Promise<NodeInputData> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -434,7 +449,7 @@ export class CLI {
         });
         return {
           type: 'link',
-          title: title || undefined,
+          title: title.trim() === '' ? undefined : title,
           data,
         };
       }
