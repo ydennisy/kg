@@ -9,6 +9,8 @@ import type { PublishSiteUseCase } from '../../application/use-cases/publish-sit
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
+import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-due-flashcards.js';
+import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
 
 export class CLI {
@@ -20,7 +22,9 @@ export class CLI {
     private searchNodesUseCase: SearchNodesUseCase,
     private getNodeUseCase: GetNodeUseCase,
     private generateFlashcardsUseCase: GenerateFlashcardsUseCase,
-    private publishSiteUseCase: PublishSiteUseCase
+    private publishSiteUseCase: PublishSiteUseCase,
+    private getDueFlashcardsUseCase: GetDueFlashcardsUseCase,
+    private reviewFlashcardUseCase: ReviewFlashcardUseCase
   ) {
     this.program = new Command();
     this.setupCommands();
@@ -63,6 +67,13 @@ export class CLI {
       .action(async () => {
         await this.publishSite();
       });
+
+    this.program
+      .command('review')
+      .description('Review due flashcards')
+      .action(async () => {
+        await this.reviewDueFlashcards();
+      });
   }
 
   private async createNode(): Promise<void> {
@@ -78,23 +89,55 @@ export class CLI {
         ],
       });
 
-      // Step 2: Collect data based on node type
-      const input = await this.collectNodeInput(nodeType);
-
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
         message: 'Make this node public (default: No)?',
         default: false,
       });
 
-      // Step 4: Create the node
-      const result = await this.createNodeUseCase.execute({
-        type: nodeType,
-        ...input,
-        isPublic,
-      });
+      let result;
+      switch (nodeType) {
+        case 'note': {
+          const input = await this.collectNodeInput('note');
+          result = await this.createNodeUseCase.execute({
+            type: 'note',
+            title: input.title,
+            data: input.data,
+            isPublic,
+          });
+          break;
+        }
+        case 'link': {
+          const input = await this.collectNodeInput('link');
+          result = await this.createNodeUseCase.execute({
+            type: 'link',
+            title: input.title,
+            data: input.data,
+            isPublic,
+          });
+          break;
+        }
+        case 'tag': {
+          const input = await this.collectNodeInput('tag');
+          result = await this.createNodeUseCase.execute({
+            type: 'tag',
+            data: input.data,
+            isPublic,
+          });
+          break;
+        }
+        case 'flashcard': {
+          const input = await this.collectNodeInput('flashcard');
+          result = await this.createNodeUseCase.execute({
+            type: 'flashcard',
+            data: input.data,
+            isPublic,
+          });
+          break;
+        }
+      }
 
-      if (result.ok) {
+      if (result && result.ok) {
         console.log(`✅ Created ${nodeType} node with ID: ${result.result.id}`);
 
         // Step 5: Ask if user wants to link to existing nodes
@@ -245,6 +288,8 @@ export class CLI {
       const linkRes = await this.linkNodesUseCase.execute({
         sourceId: nodeId,
         targetId: id,
+        type: 'related_to',
+        isBidirectional: true,
       });
       if (!linkRes.ok) {
         console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
@@ -396,6 +441,18 @@ export class CLI {
     return selectedFlashcards;
   }
 
+  private async collectNodeInput(
+    nodeType: 'note'
+  ): Promise<{ title: string; data: { content: string } }>;
+  private async collectNodeInput(
+    nodeType: 'link'
+  ): Promise<{ title?: string; data: { url: string } }>;
+  private async collectNodeInput(
+    nodeType: 'tag'
+  ): Promise<{ data: { name: string } }>;
+  private async collectNodeInput(
+    nodeType: 'flashcard'
+  ): Promise<{ data: { front: string; back: string } }>;
   private async collectNodeInput(
     nodeType: NodeType
   ): Promise<{ title?: string; data: Record<string, unknown> }> {
@@ -563,6 +620,8 @@ export class CLI {
           const linkResult = await this.linkNodesUseCase.execute({
             sourceId: newNodeId,
             targetId: targetNodeId,
+            type: 'related_to',
+            isBidirectional: true,
           });
 
           if (!linkResult.ok) {
@@ -578,5 +637,44 @@ export class CLI {
     } catch (error) {
       console.error('❌ Error linking nodes:', error);
     }
+  }
+
+  private async reviewDueFlashcards(): Promise<void> {
+    console.log('\n🔁 Reviewing due flashcards...\n');
+    const result = await this.getDueFlashcardsUseCase.execute({ limit: 20 });
+    if (!result.ok) {
+      console.error(`❌ Error fetching flashcards: ${result.error}`);
+      return;
+    }
+    const cards = result.result;
+    if (cards.length === 0) {
+      console.log('No flashcards are due for review.');
+      return;
+    }
+
+    for (const [i, card] of cards.entries()) {
+      console.log(`\n📚 Card ${i + 1} of ${cards.length}`);
+      console.log(`Front: ${card.data.front}`);
+      await input({ message: 'Press enter to reveal the back' });
+      console.log(`Back: ${card.data.back}`);
+      const quality = await select({
+        message: 'How well did you recall this card?',
+        choices: [
+          { name: 'Again', value: 0 },
+          { name: 'Hard', value: 3 },
+          { name: 'Good', value: 4 },
+          { name: 'Easy', value: 5 },
+        ],
+      });
+      const review = await this.reviewFlashcardUseCase.execute({
+        flashcard: card,
+        quality,
+      });
+      if (!review.ok) {
+        console.error(`  ❌ Failed to review card: ${review.error}`);
+      }
+    }
+
+    console.log('\n✅ Review session complete');
   }
 }

@@ -7,10 +7,12 @@ import type { SearchIndex } from '../ports/search-index.js';
 
 const mockRepository: NodeRepository = {
   save: async (node: AnyNode) => Promise.resolve(),
+  update: async (node: AnyNode) => Promise.resolve(),
   findById: async (id: string) => Promise.resolve(null),
   findAll: async () => Promise.resolve([]),
   search: async (query: string) => Promise.resolve([]),
   link: async (sourceId: string, targetId: string, type?) => Promise.resolve(),
+  findDueFlashcards: async (date, limit) => Promise.resolve([]),
 };
 
 const mockCrawler: Crawler = {

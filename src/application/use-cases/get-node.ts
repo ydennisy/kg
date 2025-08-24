@@ -12,7 +12,7 @@ class GetNodeUseCase {
     input: GetNodeInput
   ): Promise<{ ok: true; result: AnyNode } | { ok: false; error: string }> {
     try {
-      const result = await this.repository.findById(input.id);
+      const result = await this.repository.findById(input.id, false);
       if (!result) {
         return { ok: false, error: 'Node not found' };
       }

@@ -4,6 +4,11 @@ import { BaseNode } from './base-node.js';
 type FlashcardNodeData = {
   front: string;
   back: string;
+  dueAt: Date;
+  interval: number;
+  easeFactor: number;
+  repetitions: number;
+  lastReviewedAt: Date | null;
 };
 
 interface FlashcardNodeProps {
@@ -14,6 +19,11 @@ interface FlashcardNodeProps {
   isPublic: boolean;
   data: FlashcardNodeData;
 }
+
+type FlashcardNodeInputData = {
+  front: string;
+  back: string;
+};
 
 /**
  * Node representing a flashcard with front and back text.
@@ -49,7 +59,7 @@ class FlashcardNode extends BaseNode {
    */
   static create(input: {
     isPublic: boolean;
-    data: FlashcardNodeData;
+    data: FlashcardNodeInputData;
   }): FlashcardNode {
     const id = randomUUID();
     const now = new Date();
@@ -59,7 +69,15 @@ class FlashcardNode extends BaseNode {
       createdAt: now,
       updatedAt: now,
       isPublic: input.isPublic,
-      data: input.data,
+      data: {
+        front: input.data.front,
+        back: input.data.back,
+        dueAt: now,
+        interval: 0,
+        easeFactor: 2.5,
+        repetitions: 0,
+        lastReviewedAt: null,
+      },
     });
   }
 
@@ -71,6 +89,53 @@ class FlashcardNode extends BaseNode {
    */
   static hydrate(input: FlashcardNodeProps): FlashcardNode {
     return new FlashcardNode(input);
+  }
+
+  isDue(on: Date = new Date()): boolean {
+    return this.data.dueAt.getTime() <= on.getTime();
+  }
+
+  review(quality: number): FlashcardNode {
+    const now = new Date();
+    let { easeFactor, interval, repetitions } = this.data;
+
+    if (quality < 3) {
+      repetitions = 0;
+      interval = 1;
+    } else {
+      repetitions += 1;
+      if (repetitions === 1) {
+        interval = 1;
+      } else if (repetitions === 2) {
+        interval = 6;
+      } else {
+        interval = Math.round(interval * easeFactor);
+      }
+      easeFactor =
+        easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+      if (easeFactor < 1.3) {
+        easeFactor = 1.3;
+      }
+    }
+
+    const dueAt = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
+
+    return FlashcardNode.hydrate({
+      id: this.id,
+      version: this.version + 1,
+      createdAt: this.createdAt,
+      updatedAt: now,
+      isPublic: this.isPublic,
+      data: {
+        front: this.data.front,
+        back: this.data.back,
+        dueAt,
+        interval,
+        easeFactor,
+        repetitions,
+        lastReviewedAt: now,
+      },
+    });
   }
 }
 

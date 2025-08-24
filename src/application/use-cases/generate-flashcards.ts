@@ -20,7 +20,7 @@ class GenerateFlashcardsUseCase {
     { ok: true; result: Array<Flashcard> } | { ok: false; error: string }
   > {
     try {
-      const node = await this.repository.findById(input.id);
+      const node = await this.repository.findById(input.id, false);
       if (!node) {
         return { ok: false, error: 'Node not found' };
       }

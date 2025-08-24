@@ -73,16 +73,17 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
 
       if (
         (!response.message?.tool_calls ||
-          response.message.tool_calls.length === 0) &&
+          response.message?.tool_calls?.length === 0) &&
         isDone
       ) {
         break;
       }
 
       // Execute any tool calls it requested
-      if (response.message?.tool_calls?.length) {
+      const toolCalls = response.message?.tool_calls ?? [];
+      if (toolCalls.length) {
         messages.push(response.message);
-        for (const call of response.message.tool_calls) {
+        for (const call of toolCalls) {
           if (call.function?.name === 'create_flashcard') {
             const card = call.function.arguments as Flashcard;
             console.log(card);
