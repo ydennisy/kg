@@ -15,18 +15,50 @@ const nodesTable = sqliteTable(
       enum: ['note', 'link', 'tag', 'flashcard'],
     }).notNull(),
     title: text('title').notNull(),
+    version: integer('version').notNull().default(1),
     isPublic: integer('is_public', { mode: 'boolean' })
       .notNull()
       .default(false),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
-    data: text('data', { mode: 'json' }).notNull().$type<Record<string, any>>(),
   },
   (t) => [
     index('nodes_type_idx').on(t.type),
     index('nodes_is_public_idx').on(t.isPublic),
   ]
 );
+
+const noteNodesTable = sqliteTable('note_nodes', {
+  nodeId: text('node_id')
+    .primaryKey()
+    .references(() => nodesTable.id, { onDelete: 'cascade' }),
+  content: text('content').notNull(),
+});
+
+const linkNodesTable = sqliteTable('link_nodes', {
+  nodeId: text('node_id')
+    .primaryKey()
+    .references(() => nodesTable.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  crawledTitle: text('crawled_title'),
+  crawledText: text('crawled_text'),
+  crawledHtml: text('crawled_html'),
+});
+
+const tagNodesTable = sqliteTable('tag_nodes', {
+  nodeId: text('node_id')
+    .primaryKey()
+    .references(() => nodesTable.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+});
+
+const flashcardNodesTable = sqliteTable('flashcard_nodes', {
+  nodeId: text('node_id')
+    .primaryKey()
+    .references(() => nodesTable.id, { onDelete: 'cascade' }),
+  front: text('front').notNull(),
+  back: text('back').notNull(),
+});
 
 const edgesTable = sqliteTable(
   'edges',
@@ -61,10 +93,54 @@ const edgesTable = sqliteTable(
   ]
 );
 
-// A node has many outgoing edges and many incoming edges
-const nodesRelations = relations(nodesTable, ({ many }) => ({
+// Relations
+const nodesRelations = relations(nodesTable, ({ one, many }) => ({
+  noteNode: one(noteNodesTable, {
+    fields: [nodesTable.id],
+    references: [noteNodesTable.nodeId],
+  }),
+  linkNode: one(linkNodesTable, {
+    fields: [nodesTable.id],
+    references: [linkNodesTable.nodeId],
+  }),
+  tagNode: one(tagNodesTable, {
+    fields: [nodesTable.id],
+    references: [tagNodesTable.nodeId],
+  }),
+  flashcardNode: one(flashcardNodesTable, {
+    fields: [nodesTable.id],
+    references: [flashcardNodesTable.nodeId],
+  }),
   edgeSource: many(edgesTable, { relationName: 'edge_source' }),
   edgeTarget: many(edgesTable, { relationName: 'edge_target' }),
+}));
+
+const noteNodesRelations = relations(noteNodesTable, ({ one }) => ({
+  node: one(nodesTable, {
+    fields: [noteNodesTable.nodeId],
+    references: [nodesTable.id],
+  }),
+}));
+
+const linkNodesRelations = relations(linkNodesTable, ({ one }) => ({
+  node: one(nodesTable, {
+    fields: [linkNodesTable.nodeId],
+    references: [nodesTable.id],
+  }),
+}));
+
+const tagNodesRelations = relations(tagNodesTable, ({ one }) => ({
+  node: one(nodesTable, {
+    fields: [tagNodesTable.nodeId],
+    references: [nodesTable.id],
+  }),
+}));
+
+const flashcardNodesRelations = relations(flashcardNodesTable, ({ one }) => ({
+  node: one(nodesTable, {
+    fields: [flashcardNodesTable.nodeId],
+    references: [nodesTable.id],
+  }),
 }));
 
 // An edge points to one source node and one target node
@@ -81,12 +157,53 @@ const edgesRelations = relations(edgesTable, ({ one }) => ({
   }),
 }));
 
+// Type definitions
 type NodeRecord = typeof nodesTable.$inferSelect;
+type NoteNodeRecord = typeof noteNodesTable.$inferSelect;
+type LinkNodeRecord = typeof linkNodesTable.$inferSelect;
+type TagNodeRecord = typeof tagNodesTable.$inferSelect;
+type FlashcardNodeRecord = typeof flashcardNodesTable.$inferSelect;
 type EdgeRecord = typeof edgesTable.$inferSelect;
-// type NodeRecord = typeof nodesTable.$inferSelect & {
-//   edgeSource: (EdgeRecord & { target: typeof nodesTable.$inferSelect })[];
-//   edgeTarget: (EdgeRecord & { source: typeof nodesTable.$inferSelect })[];
-// };
 
-export { nodesTable, edgesTable, nodesRelations, edgesRelations };
-export type { NodeRecord };
+// Combined record types for joins
+type NodeWithNoteRecord = NodeRecord & { noteNode: NoteNodeRecord };
+type NodeWithLinkRecord = NodeRecord & { linkNode: LinkNodeRecord };
+type NodeWithTagRecord = NodeRecord & { tagNode: TagNodeRecord };
+type NodeWithFlashcardRecord = NodeRecord & {
+  flashcardNode: FlashcardNodeRecord;
+};
+
+type AnyNodeRecord =
+  | NodeWithNoteRecord
+  | NodeWithLinkRecord
+  | NodeWithTagRecord
+  | NodeWithFlashcardRecord;
+
+export {
+  nodesTable,
+  noteNodesTable,
+  linkNodesTable,
+  tagNodesTable,
+  flashcardNodesTable,
+  edgesTable,
+  nodesRelations,
+  noteNodesRelations,
+  linkNodesRelations,
+  tagNodesRelations,
+  flashcardNodesRelations,
+  edgesRelations,
+};
+
+export type {
+  NodeRecord,
+  NoteNodeRecord,
+  LinkNodeRecord,
+  TagNodeRecord,
+  FlashcardNodeRecord,
+  NodeWithNoteRecord,
+  NodeWithLinkRecord,
+  NodeWithTagRecord,
+  NodeWithFlashcardRecord,
+  AnyNodeRecord,
+  EdgeRecord,
+};

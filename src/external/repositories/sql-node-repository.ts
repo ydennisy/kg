@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
-import { nodesTable, edgesTable } from '../database/schema.js';
+import {
+  nodesTable,
+  noteNodesTable,
+  linkNodesTable,
+  tagNodesTable,
+  flashcardNodesTable,
+  edgesTable,
+} from '../database/schema.js';
 import type { DatabaseClient } from '../database/client.js';
 import type {
   NodeRepository,
@@ -17,21 +24,28 @@ export class SqlNodeRepository implements NodeRepository {
   ) {}
 
   async save(node: AnyNode): Promise<void> {
-    // const edges = node.edges;
+    const { nodeRecord, typeRecord } = this.mapper.toRecords(node);
 
-    const { id, type, title, isPublic, createdAt, updatedAt, data } =
-      this.mapper.toRecord(node);
+    // Insert into master nodes table
+    await this.db.insert(nodesTable).values(nodeRecord);
 
-    // TODO: figure out why adding a transactions throws an error that no table exists
-    await this.db.insert(nodesTable).values({
-      id,
-      type,
-      title,
-      isPublic,
-      createdAt,
-      updatedAt,
-      data,
-    });
+    // Insert into appropriate type table
+    switch (node.type) {
+      case 'note':
+        await this.db.insert(noteNodesTable).values(typeRecord);
+        break;
+      case 'link':
+        await this.db.insert(linkNodesTable).values(typeRecord);
+        break;
+      case 'tag':
+        await this.db.insert(tagNodesTable).values(typeRecord);
+        break;
+      case 'flashcard':
+        await this.db.insert(flashcardNodesTable).values(typeRecord);
+        break;
+      default:
+        throw new Error(`Unknown node type: ${node.type}`);
+    }
   }
 
   // TODO: this is temporary helper to add edges until it is handled properly in the domain
@@ -46,23 +60,32 @@ export class SqlNodeRepository implements NodeRepository {
   }
 
   async findAll(): Promise<AnyNode[]> {
-    const nodes = await this.db.select().from(nodesTable);
-    return nodes.map((node) => this.mapper.toDomain(node));
+    const results = await this.db.query.nodesTable.findMany({
+      with: {
+        noteNode: true,
+        linkNode: true,
+        tagNode: true,
+        flashcardNode: true,
+      },
+    });
+
+    return results.map((result) => this.mapper.toDomain(result as any));
   }
 
   async findById(id: string): Promise<AnyNode | null> {
-    // TODO: read up on the different query syntax Drizzle offers
-    const node = await this.db.query.nodesTable.findFirst({
+    const result = await this.db.query.nodesTable.findFirst({
       where: eq(nodesTable.id, id),
-      // For now we just return the node, no edges and nodes
-      // with: {
-      //   edgeSource: { with: { target: true } },
-      //   edgeTarget: { with: { source: true } },
-      // },
+      with: {
+        noteNode: true,
+        linkNode: true,
+        tagNode: true,
+        flashcardNode: true,
+      },
     });
-    if (!node) return null; // should be undefined?
 
-    return this.mapper.toDomain(node);
+    if (!result) return null;
+
+    return this.mapper.toDomain(result as any);
   }
 
   async search(query: string): Promise<SearchResult[]> {
@@ -77,41 +100,41 @@ export class SqlNodeRepository implements NodeRepository {
       .map((t) => `${t}*`)
       .join(' ');
 
-    // Uses FTS5 with BM25 scoring, a lower
-    // BM25 scores indicates higher relevance
-    // Very short terms (e.g., 1 char) won’t benefit from the 2/3-char prefix indexes and may be slower—consider dropping them or requiring ≥2 chars before appending *
+    // Uses FTS5 with BM25 scoring
     const results = await this.db.all(sql`
       SELECT DISTINCT
         n.id,
         n.type,
         n.title,
+        n.version,
         n.is_public,
         n.created_at,
         n.updated_at,
-        n.data,
         rank AS score,
-        snippet(nodes_fts, -1, '<b>', '</b>', '…', 20) AS snippet -- Let SQLite pick title or data automatically, upto 20 tokens
+        snippet(nodes_fts, -1, '<b>', '</b>', '…', 20) AS snippet
       FROM nodes_fts
       JOIN nodes n 
         ON n.id = nodes_fts.id
-      WHERE nodes_fts MATCH ${query}                      -- e.g. "quantum* compute*"
-        AND rank MATCH 'bm25(0.0, 5.0, 1.0)'              -- id is UNINDEXED; weight title=5, data=1
+      WHERE nodes_fts MATCH ${q}
+        AND rank MATCH 'bm25(0.0, 5.0, 1.0)'
       ORDER BY rank
       LIMIT 25
     `);
 
-    return results.map((row: any) => ({
-      node: this.mapper.toDomain({
-        id: row.id,
-        type: row.type,
-        title: row.title,
-        isPublic: Boolean(row.is_public),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        data: JSON.parse(row.data),
-      }),
-      snippet: row.snippet,
-      score: Number(row.score),
-    }));
+    // For each search result, we need to fetch the full node data with type-specific info
+    const searchResults: SearchResult[] = [];
+
+    for (const row of results) {
+      const fullNode = await this.findById(row.id);
+      if (fullNode) {
+        searchResults.push({
+          node: fullNode,
+          snippet: row.snippet,
+          score: Number(row.score),
+        });
+      }
+    }
+
+    return searchResults;
   }
 }
