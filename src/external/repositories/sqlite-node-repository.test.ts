@@ -147,6 +147,30 @@ describe('SqliteNodeRepository', () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
+  test('full text search handles multiple matches', async () => {
+    const first = NoteNode.create({
+      title: 'Dog Training',
+      isPublic: false,
+      data: { content: 'All about training your dog' },
+    });
+    const second = NoteNode.create({
+      title: 'Dog Breeds',
+      isPublic: false,
+      data: { content: 'Different kinds of dogs' },
+    });
+
+    await repository.save(first);
+    await repository.save(second);
+    await searchIndex.indexNode(first);
+    await searchIndex.indexNode(second);
+
+    const results = await repository.search('dog');
+    expect(results).toHaveLength(2);
+    expect(results.map((r) => r.node.id).sort()).toEqual(
+      [first.id, second.id].sort()
+    );
+  });
+
   test('full text search returns zero matches for irrelevant queries', async () => {
     for (const n of nodes) {
       const node = NoteNode.create({

@@ -243,22 +243,28 @@ class SqliteNodeRepository implements NodeRepository {
       return [];
     }
 
-    const nodeRecords = await this.db.query.nodesTable.findMany({
-      where: inArray(
-        nodesTable.id,
-        rows.map((r) => r.id)
-      ),
-      with: {
-        noteNode: true,
-        linkNode: true,
-        tagNode: true,
-        flashcardNode: true,
-      },
-    });
+    // Fetch full node records for each search hit individually. This avoids
+    // issues with parameter binding in some SQLite drivers when using large
+    // `IN` clauses and keeps the query logic simple.
+    const nodeRecords = await Promise.all(
+      rows.map((r) =>
+        this.db.query.nodesTable.findFirst({
+          where: eq(nodesTable.id, r.id),
+          with: {
+            noteNode: true,
+            linkNode: true,
+            tagNode: true,
+            flashcardNode: true,
+          },
+        })
+      )
+    );
 
     const nodeMap = new Map<string, AnyNode>();
     for (const record of nodeRecords) {
-      nodeMap.set(record.id, this.mapper.toDomain(record));
+      if (record) {
+        nodeMap.set(record.id, this.mapper.toDomain(record));
+      }
     }
 
     if (withRelations) {
