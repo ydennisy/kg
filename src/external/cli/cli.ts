@@ -79,7 +79,7 @@ export class CLI {
       });
 
       // Step 2: Collect data based on node type
-      const { title, data } = await this.collectNodeInput(nodeType);
+      const input = await this.collectNodeInput(nodeType);
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
@@ -90,8 +90,7 @@ export class CLI {
       // Step 4: Create the node
       const result = await this.createNodeUseCase.execute({
         type: nodeType,
-        title,
-        data,
+        ...input,
         isPublic,
       });
 
@@ -399,7 +398,7 @@ export class CLI {
 
   private async collectNodeInput(
     nodeType: NodeType
-  ): Promise<{ title: string | undefined; data: Record<string, unknown> }> {
+  ): Promise<{ title?: string; data: Record<string, unknown> }> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -439,7 +438,7 @@ export class CLI {
               value.trim().length > 0 || 'Name is required',
           }),
         };
-        return { title: undefined, data };
+        return { data };
       }
 
       case 'flashcard': {
@@ -455,7 +454,7 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
-        return { title: undefined, data };
+        return { data };
       }
 
       default:

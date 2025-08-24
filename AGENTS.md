@@ -16,64 +16,76 @@ dependency inversion - the core domain never depends on external frameworks.
 - **tag**: Named categories for organizing nodes
 - **flashcard**: Study cards with front/back content
 
+**IMPORTANT**: There is NO plan to extend node types, we actually want to keep
+the simplest and most flexible schema possible and introduce less types, so this
+means when making architecture decisions, we should not focus on improving the
+ease with which to add new node types.
+
 ## Development Commands
 
 ### Building and Running
 
 ```bash
 # Build TypeScript to JavaScript
-pnpm run build
+pnpm build
+
+# Typecheck using tsc
+pnpm typecheck
 
 # Run CLI directly with tsx (development)
-pnpm run cli
+pnpm kg
 
 # Run built version
 node dist/main.js
 
 # Run tests
-pnpm run test
-
-# Run tests in watch mode
-pnpm run test --watch
+pnpm test
 ```
 
 ### Database Management
 
 ```bash
 # Reset local database (removes local.db and recreates schema)
-pnpm run db:reset
+pnpm db:reset
 
 # Generate new migrations after schema changes
-pnpm run db:generate
+pnpm db:generate
 
 # Apply pending migrations
-pnpm run db:migrate
+pnpm db:migrate
 ```
 
 ### Site Publishing
 
 ```bash
 # Build and publish public nodes to static HTML
-pnpm run site:build
+pnpm site:build
 
 # Deploy to Vercel (requires environment setup)
-pnpm run site:deploy
+pnpm site:deploy
 ```
 
 ### Testing Single Files
 
 ```bash
 # Run specific test file
-pnpm run test src/domain/node-factory.test.ts
+pnpm test src/domain/node-factory.test.ts
 
 # Run tests matching pattern
-pnpm run test --grep "creates a note"
+pnpm test --grep "creates a note"
 ```
 
 ## Development Principles
 
 This is a **VERY IMPORTANT** section, make sure you evaluate your changes based
 on this section at all times.
+
+### Code style
+
+- Avoid type casting wherever possible.
+- Avoid the use of `any` types.
+- Always define all named exports at the bottom of the file.
+- Only export types, interfaces, classes, etc that are used in another file.
 
 ### PR & Commits
 
@@ -139,7 +151,6 @@ type: text('type', { enum: ['note', 'link', 'tag', 'flashcard'] })
 ### Test Organization
 
 - Unit tests alongside source files (`.test.ts`)
-- E2E tests in `src/e2e/`
 - Mocked repositories for use case testing
 - Vitest as test runner with Node.js and Vitest globals
 

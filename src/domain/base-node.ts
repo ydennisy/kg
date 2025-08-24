@@ -1,9 +1,11 @@
+import type { NodeType } from './node-types.js';
+
 /**
  * Base class for all node types in the knowledge graph.
  */
 abstract class BaseNode {
   readonly id: string;
-  abstract readonly type: 'note' | 'link' | 'tag' | 'flashcard';
+  abstract readonly type: NodeType;
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
