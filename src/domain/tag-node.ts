@@ -36,6 +36,10 @@ class TagNode extends BaseNode {
     return this.data.name;
   }
 
+  get searchableContent() {
+    return this.data.name;
+  }
+
   /**
    * Creates a new tag node with generated id and timestamps.
    *

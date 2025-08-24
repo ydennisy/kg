@@ -44,6 +44,16 @@ class LinkNode extends BaseNode {
     return this._title || this.data.crawled.title || this.data.url;
   }
 
+  get searchableContent() {
+    return [
+      this.data.url,
+      this.data.crawled.title,
+      this.data.crawled.text,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+
   /**
    * Creates a new link node with generated id and timestamps.
    *

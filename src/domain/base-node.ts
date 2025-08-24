@@ -18,6 +18,13 @@ abstract class BaseNode {
    */
   abstract get title(): string;
 
+  /**
+   * Gets content that should be indexed for search.
+   *
+   * @returns Searchable text content.
+   */
+  abstract get searchableContent(): string;
+
   constructor(props: {
     id: string;
     version: number;
