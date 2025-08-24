@@ -133,6 +133,7 @@ const mappers = {
       }),
     toTypeRecord: (node: TagNode): Omit<TagNodeRecord, 'nodeId'> => ({
       name: node.data.name,
+      description: node.data.description ?? null,
     }),
   },
   flashcard: {

@@ -97,7 +97,7 @@ describe('PublishSiteUseCase', () => {
     });
     const tag = TagNode.create({
       isPublic: true,
-      data: { name: 'taggy' },
+      data: { name: '#tag1', description: 'a description of the tag' },
     });
     const flashcard = FlashcardNode.create({
       isPublic: true,
@@ -140,7 +140,9 @@ describe('PublishSiteUseCase', () => {
       path.join(outputDir, 'nodes', `${tag.id}.html`),
       'utf8'
     );
-    expect(tagHtml).toContain('taggy');
+
+    expect(tagHtml).toContain('#tag1');
+    expect(tagHtml).toContain('a description of the tag');
 
     const flashHtml = await fs.readFile(
       path.join(outputDir, 'nodes', `${flashcard.id}.html`),

@@ -3,13 +3,17 @@ import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
 import type { NodeType } from '../../domain/types.js';
-import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
+import type {
+  CreateNodeUseCase,
+  CreateNodeInput,
+} from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
+import { desc } from 'drizzle-orm';
 
 export class CLI {
   private program: Command;
@@ -89,7 +93,6 @@ export class CLI {
 
       // Step 4: Create the node
       const result = await this.createNodeUseCase.execute({
-        type: nodeType,
         ...input,
         isPublic,
       });
@@ -243,8 +246,10 @@ export class CLI {
 
     for (const id of createdIds) {
       const linkRes = await this.linkNodesUseCase.execute({
-        sourceId: nodeId,
-        targetId: id,
+        fromId: nodeId,
+        toId: id,
+        type: 'related_to', // TODO: ask the user
+        isBidirectional: true, // TODO: ask the user
       });
       if (!linkRes.ok) {
         console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
@@ -398,7 +403,7 @@ export class CLI {
 
   private async collectNodeInput(
     nodeType: NodeType
-  ): Promise<{ title?: string; data: Record<string, unknown> }> {
+  ): Promise<Omit<CreateNodeInput, 'isPublic'>> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -412,7 +417,7 @@ export class CLI {
             waitForUseInput: false,
           }),
         };
-        return { title, data };
+        return { type: 'note', title, data };
       }
 
       case 'link': {
@@ -427,7 +432,11 @@ export class CLI {
           message: 'Enter a title, or leave blank to use URL title:',
           default: '',
         });
-        return { title, data };
+        return {
+          type: 'link',
+          title: title || undefined,
+          data,
+        };
       }
 
       case 'tag': {
@@ -437,8 +446,14 @@ export class CLI {
             validate: (value: string) =>
               value.trim().length > 0 || 'Name is required',
           }),
+          description: await editor({
+            message: 'Enter tag description (optional, opens editor):',
+            default: '',
+            waitForUseInput: false,
+          }),
         };
-        return { data };
+
+        return { type: 'tag', data };
       }
 
       case 'flashcard': {
@@ -454,7 +469,7 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
-        return { data };
+        return { type: 'flashcard', data };
       }
 
       default:
@@ -561,8 +576,10 @@ export class CLI {
       if (selectedNodes.length > 0) {
         for (const targetNodeId of selectedNodes) {
           const linkResult = await this.linkNodesUseCase.execute({
-            sourceId: newNodeId,
-            targetId: targetNodeId,
+            fromId: newNodeId,
+            toId: targetNodeId,
+            type: 'related_to',
+            isBidirectional: true,
           });
 
           if (!linkResult.ok) {

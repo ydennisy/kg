@@ -17,7 +17,7 @@ interface NodeRepository {
     isBidirectional: boolean
   ): Promise<void>;
   findAll(): Promise<AnyNode[]>;
-  findById(id: string, withRelations: boolean): Promise<AnyNode | null>;
+  findById(id: string, withRelations?: boolean): Promise<AnyNode | null>;
   search(query: string): Promise<SearchResult[]>;
 }
 
