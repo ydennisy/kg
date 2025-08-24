@@ -45,12 +45,16 @@ const linkNodesTable = sqliteTable('link_nodes', {
   crawledHtml: text('crawled_html'),
 });
 
-const tagNodesTable = sqliteTable('tag_nodes', {
-  nodeId: text('node_id')
-    .primaryKey()
-    .references(() => nodesTable.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-});
+const tagNodesTable = sqliteTable(
+  'tag_nodes',
+  {
+    nodeId: text('node_id')
+      .primaryKey()
+      .references(() => nodesTable.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+  },
+  (t) => [unique('tag_nodes_name_unique').on(t.name)]
+);
 
 const flashcardNodesTable = sqliteTable('flashcard_nodes', {
   nodeId: text('node_id')
