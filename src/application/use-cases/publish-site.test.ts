@@ -9,7 +9,7 @@ import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';
 import { TagNode } from '../../domain/tag-node.js';
 import { FlashcardNode } from '../../domain/flashcard-node.js';
-import { SqlNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
+import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
 import { HTMLGenerator } from '../../external/publishers/html-generator.js';
 import { PublishSiteUseCase } from './publish-site.js';
 import {
@@ -18,7 +18,7 @@ import {
 } from '../../external/database/client.js';
 
 let db: DatabaseClient;
-let repository: SqlNodeRepository;
+let repository: SqliteNodeRepository;
 let outputDir: string;
 
 beforeEach(async () => {
@@ -26,7 +26,7 @@ beforeEach(async () => {
   await migrate(db, { migrationsFolder: './drizzle' });
 
   const mapper = new NodeMapper();
-  repository = new SqlNodeRepository(db, mapper);
+  repository = new SqliteNodeRepository(db, mapper);
 
   outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'publish-test-'));
 });

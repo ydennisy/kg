@@ -1,5 +1,5 @@
 import { createDatabaseClient } from './external/database/client.js';
-import { SqlNodeRepository } from './external/repositories/sqlite-node-repository.js';
+import { SqliteNodeRepository } from './external/repositories/sqlite-node-repository.js';
 import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
 import { HTTPCrawler } from './external/crawlers/http-crawler.js';
@@ -22,7 +22,7 @@ class Application {
     const db = createDatabaseClient(
       process.env.DATABASE_URL || 'file:local.db'
     );
-    const nodeRepository = new SqlNodeRepository(db, nodeMapper);
+    const nodeRepository = new SqliteNodeRepository(db, nodeMapper);
     const htmlGenerator = new HTMLGenerator();
     const crawler = new HTTPCrawler();
     const flashcardGenerator = new OllamaFlashcardGenerator();

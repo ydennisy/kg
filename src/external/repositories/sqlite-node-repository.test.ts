@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
-import { SqlNodeRepository } from './sqlite-node-repository.js';
+import { SqliteNodeRepository } from './sqlite-node-repository.js';
 import {
   createDatabaseClient,
   type DatabaseClient,
@@ -34,9 +34,9 @@ const nodes = [
   },
 ];
 
-describe('SQLNodeRepository', () => {
+describe('SqliteNodeRepository', () => {
   let db: DatabaseClient;
-  let repository: SqlNodeRepository;
+  let repository: SqliteNodeRepository;
   let dbFile: string;
 
   beforeEach(async () => {
@@ -46,7 +46,7 @@ describe('SQLNodeRepository', () => {
     await migrate(db, { migrationsFolder: './drizzle' });
 
     const mapper = new NodeMapper();
-    repository = new SqlNodeRepository(db, mapper);
+    repository = new SqliteNodeRepository(db, mapper);
   });
 
   afterEach(async () => {
