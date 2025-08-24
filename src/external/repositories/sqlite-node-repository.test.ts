@@ -1,15 +1,17 @@
-import { describe, test, beforeEach, expect } from 'vitest';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import { NodeMapper } from '../../adapters/node-mapper.js';
-import { NodeFactory } from '../../domain/node-factory.js';
-import { AjvValidator } from '../validation/ajv-validator.js';
-import { SqlNodeRepository } from './sql-node-repository.js';
+import { NoteNode } from '../../domain/note-node.js';
+import { SqliteNodeRepository } from './sqlite-node-repository.js';
 import {
   createDatabaseClient,
   type DatabaseClient,
 } from '../database/client.js';
-import type { JSONSchema } from '../../domain/ports/validator.js';
 
 const nodes = [
   {
@@ -32,38 +34,34 @@ const nodes = [
   },
 ];
 
-describe('SQLNodeRepository', () => {
+describe('SqliteNodeRepository', () => {
   let db: DatabaseClient;
-  let repository: SqlNodeRepository;
-  let factory: NodeFactory;
+  let repository: SqliteNodeRepository;
+  let dbFile: string;
 
   beforeEach(async () => {
-    db = createDatabaseClient(':memory:');
+    // Use a temp file vs in memory to allow for transactions to work
+    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
+    db = createDatabaseClient(`file:${dbFile}`);
     await migrate(db, { migrationsFolder: './drizzle' });
 
-    const validator = new AjvValidator();
-    factory = new NodeFactory(validator);
+    const mapper = new NodeMapper();
+    repository = new SqliteNodeRepository(db, mapper);
+  });
 
-    const noteSchema = {
-      type: 'object',
-      properties: { content: { type: 'string' } },
-      required: ['content'],
-      additionalProperties: false,
-    } satisfies JSONSchema;
-
-    factory.registerSchema('note', noteSchema);
-
-    const mapper = new NodeMapper(factory);
-    repository = new SqlNodeRepository(db, mapper);
+  afterEach(async () => {
+    // best-effort cleanup
+    try {
+      await fs.unlink(dbFile);
+    } catch {}
   });
 
   test('node is saved', async () => {
-    const node = factory.createNode(
-      nodes[0]!.type,
-      nodes[0]!.title,
-      nodes[0]!.isPublic,
-      nodes[0]!.data
-    );
+    const node = NoteNode.create({
+      title: nodes[0]!.title,
+      isPublic: nodes[0]!.isPublic,
+      data: nodes[0]!.data,
+    });
 
     await expect(repository.save(node)).resolves.not.toThrow();
   });
@@ -90,12 +88,11 @@ describe('SQLNodeRepository', () => {
   // });
 
   test('node is retrieved by ID', async () => {
-    const node = factory.createNode(
-      nodes[0]!.type,
-      nodes[0]!.title,
-      nodes[0]!.isPublic,
-      nodes[0]!.data
-    );
+    const node = NoteNode.create({
+      title: nodes[0]!.title,
+      isPublic: nodes[0]!.isPublic,
+      data: nodes[0]!.data,
+    });
     await repository.save(node);
     const result = await repository.findById(node.id);
 
@@ -105,7 +102,11 @@ describe('SQLNodeRepository', () => {
 
   test('all nodes retrieved', async () => {
     for (const n of nodes) {
-      const node = factory.createNode(n.type, n.title, n.isPublic, n.data);
+      const node = NoteNode.create({
+        title: n.title,
+        isPublic: n.isPublic,
+        data: n.data,
+      });
       await repository.save(node);
     }
     const results = await repository.findAll();
@@ -115,7 +116,11 @@ describe('SQLNodeRepository', () => {
 
   test('nodes are replicated in the FTS virtual table', async () => {
     for (const n of nodes) {
-      const node = factory.createNode(n.type, n.title, n.isPublic, n.data);
+      const node = NoteNode.create({
+        title: n.title,
+        isPublic: n.isPublic,
+        data: n.data,
+      });
       await repository.save(node);
     }
     const { rows } = await db.run(sql`SELECT * FROM nodes_fts`);
@@ -125,7 +130,11 @@ describe('SQLNodeRepository', () => {
 
   test('full text search returns matches for relevant queries', async () => {
     for (const n of nodes) {
-      const node = factory.createNode(n.type, n.title, n.isPublic, n.data);
+      const node = NoteNode.create({
+        title: n.title,
+        isPublic: n.isPublic,
+        data: n.data,
+      });
       await repository.save(node);
     }
 
@@ -135,7 +144,11 @@ describe('SQLNodeRepository', () => {
 
   test('full text search returns zero matches for irrelevant queries', async () => {
     for (const n of nodes) {
-      const node = factory.createNode(n.type, n.title, n.isPublic, n.data);
+      const node = NoteNode.create({
+        title: n.title,
+        isPublic: n.isPublic,
+        data: n.data,
+      });
       await repository.save(node);
     }
 

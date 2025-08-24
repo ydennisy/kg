@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
-import type { NodeType } from '../../domain/node.js';
+import type { NodeType } from '../../domain/types.js';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
@@ -79,7 +79,7 @@ export class CLI {
       });
 
       // Step 2: Collect data based on node type
-      const { title, data } = await this.collectNodeInput(nodeType);
+      const input = await this.collectNodeInput(nodeType);
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
@@ -90,8 +90,7 @@ export class CLI {
       // Step 4: Create the node
       const result = await this.createNodeUseCase.execute({
         type: nodeType,
-        title,
-        data,
+        ...input,
         isPublic,
       });
 
@@ -131,13 +130,13 @@ export class CLI {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ node, score, snippet }) => {
+        return result.result.map(({ nodeId, type, title, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
           return {
-            value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            value: nodeId,
+            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -173,13 +172,13 @@ export class CLI {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ node, score, snippet }) => {
+        return result.result.map(({ nodeId, type, title, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
           return {
-            value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            value: nodeId,
+            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -399,7 +398,7 @@ export class CLI {
 
   private async collectNodeInput(
     nodeType: NodeType
-  ): Promise<{ title: string | undefined; data: Record<string, unknown> }> {
+  ): Promise<{ title?: string; data: Record<string, unknown> }> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -439,7 +438,7 @@ export class CLI {
               value.trim().length > 0 || 'Name is required',
           }),
         };
-        return { title: undefined, data };
+        return { data };
       }
 
       case 'flashcard': {
@@ -455,7 +454,7 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
-        return { title: undefined, data };
+        return { data };
       }
 
       default:
@@ -518,8 +517,8 @@ export class CLI {
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(
-              ({ node }) =>
-                node.id !== newNodeId && !selectedNodes.includes(node.id)
+              ({ nodeId }) =>
+                nodeId !== newNodeId && !selectedNodes.includes(nodeId)
             );
 
             if (filteredResults.length === 0) {
@@ -532,17 +531,21 @@ export class CLI {
               ];
             }
 
-            return filteredResults.map(({ node, score }) => {
-              // Get a preview of the data
-              const dataPreview = this.formatNodePreview(node);
+            return filteredResults.map(
+              ({ nodeId, type, title, score, snippet }) => {
+                // Use snippet for preview instead of fetching full node data
+                const snippetPreview =
+                  snippet
+                    .replace(/<b>/g, '')
+                    .replace(/<\/b>/g, '')
+                    .substring(0, 50) + (snippet.length > 50 ? '...' : '');
 
-              return {
-                name: `[${node.type.toUpperCase()}] ${
-                  node.title
-                } - ${dataPreview} (Score: ${score.toFixed(2)})`,
-                value: node.id,
-              };
-            });
+                return {
+                  name: `[${type.toUpperCase()}] ${title} - ${snippetPreview} (Score: ${score.toFixed(2)})`,
+                  value: nodeId,
+                };
+              }
+            );
           },
         });
 
@@ -575,29 +578,5 @@ export class CLI {
     } catch (error) {
       console.error('❌ Error linking nodes:', error);
     }
-  }
-
-  private formatNodePreview(node: any): string {
-    const data = node.data;
-
-    if (typeof data === 'string') {
-      return data.slice(0, 50) + (data.length > 50 ? '...' : '');
-    }
-
-    if (typeof data === 'object' && data !== null) {
-      // Try common preview fields
-      const previewField = data.content || data.url || data.name || data.front;
-      if (previewField && typeof previewField === 'string') {
-        return (
-          previewField.slice(0, 50) + (previewField.length > 50 ? '...' : '')
-        );
-      }
-
-      // Fallback to JSON representation
-      const jsonStr = JSON.stringify(data);
-      return jsonStr.slice(0, 50) + (jsonStr.length > 50 ? '...' : '');
-    }
-
-    return 'No preview available';
   }
 }

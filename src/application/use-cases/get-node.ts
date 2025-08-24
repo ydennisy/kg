@@ -1,4 +1,4 @@
-import type { Node } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 
 type GetNodeInput = {
@@ -10,7 +10,7 @@ class GetNodeUseCase {
 
   async execute(
     input: GetNodeInput
-  ): Promise<{ ok: true; result: Node } | { ok: false; error: string }> {
+  ): Promise<{ ok: true; result: AnyNode } | { ok: false; error: string }> {
     try {
       const result = await this.repository.findById(input.id);
       if (!result) {

@@ -1,4 +1,4 @@
-import type { EdgeType } from '../../domain/node.js';
+import type { EdgeType } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 
 type LinkNodesInput = {

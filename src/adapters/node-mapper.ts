@@ -1,34 +1,251 @@
-import { NodeFactory } from '../domain/node-factory.js';
-import type { Node, NodeType } from '../domain/node.js';
-import type { NodeRecord } from '../external/database/schema.js';
+import { NoteNode } from '../domain/note-node.js';
+import { LinkNode } from '../domain/link-node.js';
+import { TagNode } from '../domain/tag-node.js';
+import { FlashcardNode } from '../domain/flashcard-node.js';
+import type { AnyNode, NodeType } from '../domain/types.js';
+import type {
+  NodeRecord,
+  AnyNodeRecord,
+  NoteNodeRecord,
+  LinkNodeRecord,
+  TagNodeRecord,
+  FlashcardNodeRecord,
+  NodeWithNoteRecord,
+  NodeWithLinkRecord,
+  NodeWithTagRecord,
+  NodeWithFlashcardRecord,
+} from '../external/database/schema.js';
+
+// Maps NodeType to the domain entity class
+type NodeEntityMap = {
+  note: NoteNode;
+  link: LinkNode;
+  tag: TagNode;
+  flashcard: FlashcardNode;
+};
+
+// Maps NodeType to the full, joined database record type
+type NodeRecordMap = {
+  note: NodeWithNoteRecord;
+  link: NodeWithLinkRecord;
+  tag: NodeWithTagRecord;
+  flashcard: NodeWithFlashcardRecord;
+};
+
+// Maps NodeType to the type-specific database record
+type TypeRecordMap = {
+  note: NoteNodeRecord;
+  link: LinkNodeRecord;
+  tag: TagNodeRecord;
+  flashcard: FlashcardNodeRecord;
+};
+
+/**
+ * Configuration object that wires database records to domain entities.
+ * Each property is keyed by `NodeType` and provides two mapping functions:
+ * - `toDomain` takes the fully joined database record for that type and returns
+ *   the hydrated domain entity.
+ * - `toTypeRecord` takes a domain entity and produces the type-specific
+ *   database record excluding the `nodeId` foreign key.
+ */
+type MapperConfig = {
+  [T in NodeType]: {
+    toDomain: (record: NodeRecordMap[T]) => NodeEntityMap[T];
+    toTypeRecord: (node: NodeEntityMap[T]) => Omit<TypeRecordMap[T], 'nodeId'>;
+  };
+};
+
+/**
+ * Union describing the pair of records required to insert a node into the
+ * database. The `type` discriminant identifies the node variety, `nodeRecord`
+ * holds the common node fields, and `typeRecord` contains the type-specific
+ * data including the foreign key back to `nodeRecord`.
+ */
+type InsertBundle =
+  | { type: 'note'; nodeRecord: NodeRecord; typeRecord: NoteNodeRecord }
+  | { type: 'link'; nodeRecord: NodeRecord; typeRecord: LinkNodeRecord }
+  | { type: 'tag'; nodeRecord: NodeRecord; typeRecord: TagNodeRecord }
+  | {
+      type: 'flashcard';
+      nodeRecord: NodeRecord;
+      typeRecord: FlashcardNodeRecord;
+    };
+
+/**
+ * Static mapping implementations for each node type. These functions are used
+ * by `NodeMapper` to convert between persistence layer records and in-memory
+ * domain entities:
+ * - `toDomain` expects a joined database record and returns the corresponding
+ *   hydrated node instance.
+ * - `toTypeRecord` accepts a domain node and returns the type-specific record
+ *   data ready for persistence (without `nodeId`).
+ */
+const mappers = {
+  note: {
+    toDomain: (record: NodeWithNoteRecord) =>
+      NoteNode.hydrate({
+        id: record.id,
+        version: record.version,
+        createdAt: new Date(record.createdAt),
+        updatedAt: new Date(record.updatedAt),
+        isPublic: record.isPublic,
+        title: record.title,
+        data: { content: record.noteNode.content },
+      }),
+    toTypeRecord: (node: NoteNode): Omit<NoteNodeRecord, 'nodeId'> => ({
+      content: node.content,
+    }),
+  },
+  link: {
+    toDomain: (record: NodeWithLinkRecord) =>
+      LinkNode.hydrate({
+        id: record.id,
+        version: record.version,
+        createdAt: new Date(record.createdAt),
+        updatedAt: new Date(record.updatedAt),
+        isPublic: record.isPublic,
+        title: record.title ?? undefined,
+        data: {
+          url: record.linkNode.url,
+          crawled: {
+            title: record.linkNode.crawledTitle ?? undefined,
+            text: record.linkNode.crawledText ?? undefined,
+            html: record.linkNode.crawledHtml ?? undefined,
+          },
+        },
+      }),
+    toTypeRecord: (node: LinkNode): Omit<LinkNodeRecord, 'nodeId'> => ({
+      url: node.data.url,
+      crawledTitle: node.data.crawled.title ?? null,
+      crawledText: node.data.crawled.text ?? null,
+      crawledHtml: node.data.crawled.html ?? null,
+    }),
+  },
+  tag: {
+    toDomain: (record: NodeWithTagRecord) =>
+      TagNode.hydrate({
+        id: record.id,
+        version: record.version,
+        createdAt: new Date(record.createdAt),
+        updatedAt: new Date(record.updatedAt),
+        isPublic: record.isPublic,
+        data: { name: record.tagNode.name },
+      }),
+    toTypeRecord: (node: TagNode): Omit<TagNodeRecord, 'nodeId'> => ({
+      name: node.data.name,
+    }),
+  },
+  flashcard: {
+    toDomain: (record: NodeWithFlashcardRecord) =>
+      FlashcardNode.hydrate({
+        id: record.id,
+        version: record.version,
+        createdAt: new Date(record.createdAt),
+        updatedAt: new Date(record.updatedAt),
+        isPublic: record.isPublic,
+        data: {
+          front: record.flashcardNode.front,
+          back: record.flashcardNode.back,
+        },
+      }),
+    toTypeRecord: (
+      node: FlashcardNode
+    ): Omit<FlashcardNodeRecord, 'nodeId'> => ({
+      front: node.data.front,
+      back: node.data.back,
+    }),
+  },
+} satisfies MapperConfig;
 
 class NodeMapper {
-  constructor(private nodeFactory: NodeFactory) {}
+  public toDomain(record: AnyNodeRecord): AnyNode {
+    if (this.isNoteRecord(record)) {
+      return mappers.note.toDomain(record);
+    }
+    if (this.isLinkRecord(record)) {
+      return mappers.link.toDomain(record);
+    }
+    if (this.isTagRecord(record)) {
+      return mappers.tag.toDomain(record);
+    }
+    if (this.isFlashcardRecord(record)) {
+      return mappers.flashcard.toDomain(record);
+    }
 
-  public toDomain(record: NodeRecord): Node {
-    const node = this.nodeFactory.hydrateNode(
-      record.id,
-      record.type as NodeType, // TODO: check this invariant
-      record.title,
-      record.isPublic,
-      new Date(record.createdAt),
-      new Date(record.updatedAt),
-      record.data
-    );
-
-    return node;
+    const neverCheck: never = record;
+    throw new Error(`Unknown node type: ${neverCheck}`);
   }
 
-  public toPersistence(node: Node): NodeRecord {
-    return {
+  public toRecords(node: AnyNode): InsertBundle {
+    const nodeRecord: NodeRecord = {
       id: node.id,
       type: node.type,
       title: node.title,
+      version: node.version,
       isPublic: node.isPublic,
       createdAt: node.createdAt.toISOString(),
       updatedAt: node.updatedAt.toISOString(),
-      data: node.data,
     };
+
+    // We use a switch statement here purely for type-safe dispatch.
+    // VS Code will now correctly infer the type of `typeRecord`.
+    let typeRecord:
+      | NoteNodeRecord
+      | LinkNodeRecord
+      | TagNodeRecord
+      | FlashcardNodeRecord;
+
+    switch (node.type) {
+      case 'note':
+        return {
+          type: 'note',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.note.toTypeRecord(node) },
+        };
+      case 'link':
+        return {
+          type: 'link',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.link.toTypeRecord(node) },
+        };
+      case 'tag':
+        return {
+          type: 'tag',
+          nodeRecord,
+          typeRecord: { nodeId: node.id, ...mappers.tag.toTypeRecord(node) },
+        };
+      case 'flashcard':
+        return {
+          type: 'flashcard',
+          nodeRecord,
+          typeRecord: {
+            nodeId: node.id,
+            ...mappers.flashcard.toTypeRecord(node),
+          },
+        };
+      default:
+        // This ensures we handle all cases, satisfying TypeScript's exhaustiveness check.
+        const neverCheck: never = node;
+        throw new Error(`Unhandled node type: ${neverCheck}`);
+    }
+  }
+
+  private isNoteRecord(record: AnyNodeRecord): record is NodeWithNoteRecord {
+    return record.type === 'note';
+  }
+
+  private isLinkRecord(record: AnyNodeRecord): record is NodeWithLinkRecord {
+    return record.type === 'link';
+  }
+
+  private isTagRecord(record: AnyNodeRecord): record is NodeWithTagRecord {
+    return record.type === 'tag';
+  }
+
+  private isFlashcardRecord(
+    record: AnyNodeRecord
+  ): record is NodeWithFlashcardRecord {
+    return record.type === 'flashcard';
   }
 }
 

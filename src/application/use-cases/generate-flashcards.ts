@@ -26,7 +26,9 @@ class GenerateFlashcardsUseCase {
       }
 
       // TODO: handle different node types
-      const flashcards = await this.flashcardGenerator.generate(node.data.text);
+      const flashcards = await this.flashcardGenerator.generate(
+        (node as any).data?.text || ''
+      );
 
       return { ok: true, result: flashcards };
     } catch (err) {
