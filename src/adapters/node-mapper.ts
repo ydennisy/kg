@@ -40,7 +40,14 @@ type TypeRecordMap = {
   flashcard: FlashcardNodeRecord;
 };
 
-// A fully type-safe MapperConfig using lookup maps
+/**
+ * Configuration object that wires database records to domain entities.
+ * Each property is keyed by `NodeType` and provides two mapping functions:
+ * - `toDomain` takes the fully joined database record for that type and returns
+ *   the hydrated domain entity.
+ * - `toTypeRecord` takes a domain entity and produces the type-specific
+ *   database record excluding the `nodeId` foreign key.
+ */
 type MapperConfig = {
   [T in NodeType]: {
     toDomain: (record: NodeRecordMap[T]) => NodeEntityMap[T];
@@ -48,6 +55,12 @@ type MapperConfig = {
   };
 };
 
+/**
+ * Union describing the pair of records required to insert a node into the
+ * database. The `type` discriminant identifies the node variety, `nodeRecord`
+ * holds the common node fields, and `typeRecord` contains the type-specific
+ * data including the foreign key back to `nodeRecord`.
+ */
 type InsertBundle =
   | { type: 'note'; nodeRecord: NodeRecord; typeRecord: NoteNodeRecord }
   | { type: 'link'; nodeRecord: NodeRecord; typeRecord: LinkNodeRecord }
@@ -58,7 +71,15 @@ type InsertBundle =
       typeRecord: FlashcardNodeRecord;
     };
 
-// --- Static Mapper Configuration ---
+/**
+ * Static mapping implementations for each node type. These functions are used
+ * by `NodeMapper` to convert between persistence layer records and in-memory
+ * domain entities:
+ * - `toDomain` expects a joined database record and returns the corresponding
+ *   hydrated node instance.
+ * - `toTypeRecord` accepts a domain node and returns the type-specific record
+ *   data ready for persistence (without `nodeId`).
+ */
 const mappers = {
   note: {
     toDomain: (record: NodeWithNoteRecord) =>
