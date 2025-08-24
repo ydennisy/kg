@@ -150,6 +150,13 @@ const mappers = {
         data: {
           front: record.flashcardNode.front,
           back: record.flashcardNode.back,
+          dueAt: new Date(record.flashcardNode.dueAt),
+          interval: record.flashcardNode.interval,
+          easeFactor: record.flashcardNode.easeFactor,
+          repetitions: record.flashcardNode.repetitions,
+          lastReviewedAt: record.flashcardNode.lastReviewedAt
+            ? new Date(record.flashcardNode.lastReviewedAt)
+            : null,
         },
       }),
     toTypeRecord: (
@@ -157,6 +164,13 @@ const mappers = {
     ): Omit<FlashcardNodeRecord, 'nodeId'> => ({
       front: node.data.front,
       back: node.data.back,
+      dueAt: node.data.dueAt.toISOString(),
+      interval: node.data.interval,
+      easeFactor: node.data.easeFactor,
+      repetitions: node.data.repetitions,
+      lastReviewedAt: node.data.lastReviewedAt
+        ? node.data.lastReviewedAt.toISOString()
+        : null,
     }),
   },
 } satisfies MapperConfig;

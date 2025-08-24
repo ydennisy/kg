@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, or, inArray, sql } from 'drizzle-orm';
+import { eq, or, inArray, sql, lte, asc } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import {
   nodesTable,
@@ -15,6 +15,7 @@ import type {
   SearchResult,
 } from '../../application/ports/node-repository.js';
 import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
+import type { FlashcardNode } from '../../domain/flashcard-node.js';
 
 const typeTableLookup: Record<
   NodeType,
@@ -41,6 +42,67 @@ class SqliteNodeRepository implements NodeRepository {
     await this.db.transaction(async (tx) => {
       await tx.insert(nodesTable).values(bundle.nodeRecord);
       await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
+    });
+  }
+
+  async update(node: AnyNode): Promise<void> {
+    const bundle = this.mapper.toRecords(node);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(nodesTable)
+        .set({
+          type: bundle.nodeRecord.type,
+          title: bundle.nodeRecord.title,
+          version: bundle.nodeRecord.version,
+          isPublic: bundle.nodeRecord.isPublic,
+          createdAt: bundle.nodeRecord.createdAt,
+          updatedAt: bundle.nodeRecord.updatedAt,
+        })
+        .where(eq(nodesTable.id, bundle.nodeRecord.id));
+
+      switch (bundle.type) {
+        case 'note':
+          await tx
+            .update(noteNodesTable)
+            .set({ content: bundle.typeRecord.content })
+            .where(eq(noteNodesTable.nodeId, node.id));
+          break;
+        case 'link':
+          await tx
+            .update(linkNodesTable)
+            .set({
+              url: bundle.typeRecord.url,
+              crawledTitle: bundle.typeRecord.crawledTitle,
+              crawledText: bundle.typeRecord.crawledText,
+              crawledHtml: bundle.typeRecord.crawledHtml,
+            })
+            .where(eq(linkNodesTable.nodeId, node.id));
+          break;
+        case 'tag':
+          await tx
+            .update(tagNodesTable)
+            .set({
+              name: bundle.typeRecord.name,
+              description: bundle.typeRecord.description,
+            })
+            .where(eq(tagNodesTable.nodeId, node.id));
+          break;
+        case 'flashcard':
+          await tx
+            .update(flashcardNodesTable)
+            .set({
+              front: bundle.typeRecord.front,
+              back: bundle.typeRecord.back,
+              dueAt: bundle.typeRecord.dueAt,
+              interval: bundle.typeRecord.interval,
+              easeFactor: bundle.typeRecord.easeFactor,
+              repetitions: bundle.typeRecord.repetitions,
+              lastReviewedAt: bundle.typeRecord.lastReviewedAt,
+            })
+            .where(eq(flashcardNodesTable.nodeId, node.id));
+          break;
+      }
     });
   }
 
@@ -251,6 +313,23 @@ class SqliteNodeRepository implements NodeRepository {
       snippet: row.snippet,
       score: Number(row.score),
     }));
+  }
+
+  async findDueFlashcards(date: Date, limit: number): Promise<FlashcardNode[]> {
+    const records = await this.db.query.flashcardNodesTable.findMany({
+      where: lte(flashcardNodesTable.dueAt, date.toISOString()),
+      with: { node: true },
+      orderBy: asc(flashcardNodesTable.dueAt),
+      limit,
+    });
+
+    return records.map((r) => {
+      const node = this.mapper.toDomain({ ...r.node, flashcardNode: r });
+      if (node.type !== 'flashcard') {
+        throw new Error('Expected flashcard node');
+      }
+      return node;
+    });
   }
 }
 

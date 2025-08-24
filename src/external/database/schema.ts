@@ -3,6 +3,7 @@ import {
   sqliteTable,
   text,
   integer,
+  real,
   index,
   unique,
 } from 'drizzle-orm/sqlite-core';
@@ -71,6 +72,11 @@ const flashcardNodesTable = sqliteTable('flashcard_nodes', {
     .references(() => nodesTable.id, { onDelete: 'cascade' }),
   front: text('front').notNull(),
   back: text('back').notNull(),
+  dueAt: text('due_at').notNull(),
+  interval: integer('interval').notNull(),
+  easeFactor: real('ease_factor').notNull(),
+  repetitions: integer('repetitions').notNull(),
+  lastReviewedAt: text('last_reviewed_at'),
 });
 
 const edgesTable = sqliteTable(
