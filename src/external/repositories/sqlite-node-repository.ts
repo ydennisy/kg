@@ -14,7 +14,20 @@ import type {
   NodeRepository,
   SearchResult,
 } from '../../application/ports/node-repository.js';
-import type { AnyNode, EdgeType } from '../../domain/types.js';
+import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
+
+const typeTableLookup: Record<
+  NodeType,
+  | typeof noteNodesTable
+  | typeof linkNodesTable
+  | typeof tagNodesTable
+  | typeof flashcardNodesTable
+> = {
+  note: noteNodesTable,
+  link: linkNodesTable,
+  tag: tagNodesTable,
+  flashcard: flashcardNodesTable,
+};
 
 class SqliteNodeRepository implements NodeRepository {
   constructor(
@@ -27,21 +40,7 @@ class SqliteNodeRepository implements NodeRepository {
 
     await this.db.transaction(async (tx) => {
       await tx.insert(nodesTable).values(bundle.nodeRecord);
-
-      switch (bundle.type) {
-        case 'note':
-          await tx.insert(noteNodesTable).values(bundle.typeRecord);
-          break;
-        case 'link':
-          await tx.insert(linkNodesTable).values(bundle.typeRecord);
-          break;
-        case 'tag':
-          await tx.insert(tagNodesTable).values(bundle.typeRecord);
-          break;
-        case 'flashcard':
-          await tx.insert(flashcardNodesTable).values(bundle.typeRecord);
-          break;
-      }
+      await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
     });
   }
 
