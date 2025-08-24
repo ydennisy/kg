@@ -15,6 +15,9 @@ interface NoteNodeProps {
   data: NoteNodeData;
 }
 
+/**
+ * Node representing a textual note with a title and content body.
+ */
 class NoteNode extends BaseNode {
   readonly type: 'note';
   private _title: string;
@@ -27,14 +30,30 @@ class NoteNode extends BaseNode {
     this.data = input.data;
   }
 
+  /**
+   * Gets the note's title.
+   *
+   * @returns Note title.
+   */
   get title() {
     return this._title;
   }
 
+  /**
+   * Gets the note's content body.
+   *
+   * @returns Note content text.
+   */
   get content() {
     return this.data.content;
   }
 
+  /**
+   * Creates a new note node with generated id and timestamps.
+   *
+   * @param input Object containing visibility, title and note data.
+   * @returns Newly created note node.
+   */
   static create(input: {
     isPublic: boolean;
     title: string;
@@ -53,6 +72,12 @@ class NoteNode extends BaseNode {
     });
   }
 
+  /**
+   * Recreates a note node from persisted properties.
+   *
+   * @param input Complete note node properties.
+   * @returns Hydrated note node instance.
+   */
   static hydrate(input: NoteNodeProps): NoteNode {
     return new NoteNode(input);
   }
