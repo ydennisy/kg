@@ -114,20 +114,12 @@ export class SqlNodeRepository implements NodeRepository {
       LIMIT 25
     `);
 
-    // For each search result, we need to fetch the full node data with type-specific info
-    const searchResults: SearchResult[] = [];
-
-    for (const row of results) {
-      const fullNode = await this.findById(row.id);
-      if (fullNode) {
-        searchResults.push({
-          node: fullNode,
-          snippet: row.snippet,
-          score: Number(row.score),
-        });
-      }
-    }
-
-    return searchResults;
+    return results.map((row: any) => ({
+      nodeId: row.id,
+      type: row.type,
+      title: row.title,
+      snippet: row.snippet,
+      score: Number(row.score),
+    }));
   }
 }

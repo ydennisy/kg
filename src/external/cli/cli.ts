@@ -131,13 +131,13 @@ export class CLI {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ node, score, snippet }) => {
+        return result.result.map(({ nodeId, type, title, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
           return {
-            value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            value: nodeId,
+            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -173,13 +173,13 @@ export class CLI {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
         }
-        return result.result.map(({ node, score, snippet }) => {
+        return result.result.map(({ nodeId, type, title, score, snippet }) => {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
           return {
-            value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            value: nodeId,
+            name: `[${type.toUpperCase()}] ${title} (${score.toFixed(2)})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -518,8 +518,8 @@ export class CLI {
 
             // Filter out the newly created node and already selected nodes
             const filteredResults = results.filter(
-              ({ node }) =>
-                node.id !== newNodeId && !selectedNodes.includes(node.id)
+              ({ nodeId }) =>
+                nodeId !== newNodeId && !selectedNodes.includes(nodeId)
             );
 
             if (filteredResults.length === 0) {
@@ -532,17 +532,21 @@ export class CLI {
               ];
             }
 
-            return filteredResults.map(({ node, score }) => {
-              // Get a preview of the data
-              const dataPreview = this.formatNodePreview(node);
+            return filteredResults.map(
+              ({ nodeId, type, title, score, snippet }) => {
+                // Use snippet for preview instead of fetching full node data
+                const snippetPreview =
+                  snippet
+                    .replace(/<b>/g, '')
+                    .replace(/<\/b>/g, '')
+                    .substring(0, 50) + (snippet.length > 50 ? '...' : '');
 
-              return {
-                name: `[${node.type.toUpperCase()}] ${
-                  node.title
-                } - ${dataPreview} (Score: ${score.toFixed(2)})`,
-                value: node.id,
-              };
-            });
+                return {
+                  name: `[${type.toUpperCase()}] ${title} - ${snippetPreview} (Score: ${score.toFixed(2)})`,
+                  value: nodeId,
+                };
+              }
+            );
           },
         });
 
@@ -575,29 +579,5 @@ export class CLI {
     } catch (error) {
       console.error('❌ Error linking nodes:', error);
     }
-  }
-
-  private formatNodePreview(node: any): string {
-    const data = node.data;
-
-    if (typeof data === 'string') {
-      return data.slice(0, 50) + (data.length > 50 ? '...' : '');
-    }
-
-    if (typeof data === 'object' && data !== null) {
-      // Try common preview fields
-      const previewField = data.content || data.url || data.name || data.front;
-      if (previewField && typeof previewField === 'string') {
-        return (
-          previewField.slice(0, 50) + (previewField.length > 50 ? '...' : '')
-        );
-      }
-
-      // Fallback to JSON representation
-      const jsonStr = JSON.stringify(data);
-      return jsonStr.slice(0, 50) + (jsonStr.length > 50 ? '...' : '');
-    }
-
-    return 'No preview available';
   }
 }
