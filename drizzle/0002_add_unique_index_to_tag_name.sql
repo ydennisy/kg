@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX `tag_nodes_name_unique` ON `tag_nodes` (`name`);

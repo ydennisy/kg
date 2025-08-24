@@ -27,6 +27,7 @@ CREATE TABLE `link_nodes` (
 	FOREIGN KEY (`node_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `link_nodes_url_unique` ON `link_nodes` (`url`);--> statement-breakpoint
 CREATE TABLE `nodes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`type` text NOT NULL,
@@ -48,5 +49,8 @@ CREATE TABLE `note_nodes` (
 CREATE TABLE `tag_nodes` (
 	`node_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
+	`description` text,
 	FOREIGN KEY (`node_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX `tag_nodes_name_unique` ON `tag_nodes` (`name`);

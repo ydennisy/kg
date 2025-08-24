@@ -1,6 +1,6 @@
 {
-  "id": "7bd05808-47b7-4348-b152-c89865ca5bf7",
-  "prevId": "6d3ff296-cd87-43cf-aabd-4172bcc182de",
+  "id": "8d957de6-ad13-4c2f-9a3b-9030924a77f8",
+  "prevId": "a8281a4b-6418-46b9-a241-51e69ede6dee",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -183,7 +183,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "link_nodes_url_unique": {
+          "name": "link_nodes_url_unique",
+          "columns": [
+            "url"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "link_nodes_node_id_nodes_id_fk": {
           "name": "link_nodes_node_id_nodes_id_fk",
@@ -333,9 +341,24 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "tag_nodes_name_unique": {
+          "name": "tag_nodes_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "tag_nodes_node_id_nodes_id_fk": {
           "name": "tag_nodes_node_id_nodes_id_fk",
