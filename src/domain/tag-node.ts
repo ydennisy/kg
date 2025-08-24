@@ -14,6 +14,9 @@ interface TagNodeProps {
   data: TagNodeData;
 }
 
+/**
+ * Node representing a tag used for categorizing other nodes.
+ */
 class TagNode extends BaseNode {
   readonly type: 'tag';
   readonly data: TagNodeData;
@@ -24,10 +27,21 @@ class TagNode extends BaseNode {
     this.data = input.data;
   }
 
+  /**
+   * Gets the tag's display name.
+   *
+   * @returns Tag name.
+   */
   get title() {
     return this.data.name;
   }
 
+  /**
+   * Creates a new tag node with generated id and timestamps.
+   *
+   * @param input Object containing visibility and tag data.
+   * @returns Newly created tag node.
+   */
   static create(input: {
     isPublic: boolean;
     data: TagNodeData;
@@ -44,6 +58,12 @@ class TagNode extends BaseNode {
     });
   }
 
+  /**
+   * Recreates a tag node from persisted properties.
+   *
+   * @param input Complete tag node properties.
+   * @returns Hydrated tag node instance.
+   */
   static hydrate(input: TagNodeProps): TagNode {
     return new TagNode(input);
   }
