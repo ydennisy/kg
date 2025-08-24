@@ -37,6 +37,10 @@ class FlashcardNode extends BaseNode {
     return this.data.front;
   }
 
+  get searchableContent() {
+    return `${this.data.front} ${this.data.back}`;
+  }
+
   /**
    * Creates a new flashcard node with generated id and timestamps.
    *

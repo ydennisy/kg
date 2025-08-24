@@ -11,6 +11,7 @@ import { PublishSiteUseCase } from './application/use-cases/publish-site.js';
 import { LinkNodesUseCase } from './application/use-cases/link-nodes.js';
 import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
 import { GenerateFlashcardsUseCase } from './application/use-cases/generate-flashcards.js';
+import { SqliteSearchIndex } from './external/search-index/sqlite-search-index.js';
 
 class Application {
   private cli: CLI;
@@ -23,11 +24,16 @@ class Application {
       process.env.DATABASE_URL || 'file:local.db'
     );
     const nodeRepository = new SqliteNodeRepository(db, nodeMapper);
+    const searchIndex = new SqliteSearchIndex(db);
     const htmlGenerator = new HTMLGenerator();
     const crawler = new HTTPCrawler();
     const flashcardGenerator = new OllamaFlashcardGenerator();
 
-    const createNode = new CreateNodeUseCase(nodeRepository, crawler);
+    const createNode = new CreateNodeUseCase(
+      nodeRepository,
+      crawler,
+      searchIndex
+    );
     const linkNodes = new LinkNodesUseCase(nodeRepository);
     const searchNodes = new SearchNodesUseCase(nodeRepository);
     const getNode = new GetNodeUseCase(nodeRepository);

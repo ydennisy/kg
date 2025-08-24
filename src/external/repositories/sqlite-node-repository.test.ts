@@ -12,6 +12,7 @@ import {
   createDatabaseClient,
   type DatabaseClient,
 } from '../database/client.js';
+import { SqliteSearchIndex } from '../search-index/sqlite-search-index.js';
 
 const nodes = [
   {
@@ -38,6 +39,7 @@ describe('SqliteNodeRepository', () => {
   let db: DatabaseClient;
   let repository: SqliteNodeRepository;
   let dbFile: string;
+  let searchIndex: SqliteSearchIndex;
 
   beforeEach(async () => {
     // Use a temp file vs in memory to allow for transactions to work
@@ -47,6 +49,7 @@ describe('SqliteNodeRepository', () => {
 
     const mapper = new NodeMapper();
     repository = new SqliteNodeRepository(db, mapper);
+    searchIndex = new SqliteSearchIndex(db);
   });
 
   afterEach(async () => {
@@ -122,6 +125,7 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
+      await searchIndex.indexNode(node);
     }
     const { rows } = await db.run(sql`SELECT * FROM nodes_fts`);
 
@@ -136,6 +140,7 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
+      await searchIndex.indexNode(node);
     }
 
     const results = await repository.search('computers');
@@ -150,6 +155,7 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
+      await searchIndex.indexNode(node);
     }
 
     const results = await repository.search('irrelevant');

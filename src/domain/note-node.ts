@@ -48,6 +48,10 @@ class NoteNode extends BaseNode {
     return this.data.content;
   }
 
+  get searchableContent() {
+    return this.data.content;
+  }
+
   /**
    * Creates a new note node with generated id and timestamps.
    *
