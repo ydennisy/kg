@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
-import type { NodeType } from '../../domain/node.js';
+import type { NodeType } from '../../domain/types.js';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';

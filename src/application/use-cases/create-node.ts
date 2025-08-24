@@ -3,7 +3,7 @@ import { LinkNode } from '../../domain/link-node.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { TagNode } from '../../domain/tag-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
-import type { AnyNode, NodeType } from '../../domain/node.js';
+import type { AnyNode, NodeType } from '../../domain/types.js';
 import type { Crawler } from '../ports/crawler.js';
 
 type CreateNodeInput =

@@ -6,4 +6,11 @@ import { TagNode } from './tag-node.js';
 type AnyNode = FlashcardNode | LinkNode | NoteNode | TagNode;
 type NodeType = AnyNode['type'];
 
-export type { AnyNode, NodeType };
+type EdgeType =
+  | 'references'
+  | 'contains'
+  | 'tagged_with'
+  | 'similar_to'
+  | 'responds_to';
+
+export type { AnyNode, NodeType, EdgeType };

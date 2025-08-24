@@ -1,4 +1,4 @@
-import type { AnyNode } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 
 type GetNodeInput = {

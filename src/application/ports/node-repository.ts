@@ -1,4 +1,4 @@
-import type { AnyNode } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 import type { EdgeType } from '../../domain/edge.js';
 
 type SearchResult = {

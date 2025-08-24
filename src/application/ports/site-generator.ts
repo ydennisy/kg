@@ -1,4 +1,4 @@
-import type { AnyNode } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 
 interface SiteFile {
   path: string; // e.g., "index.html", "nodes/abc123.html", "styles.css"

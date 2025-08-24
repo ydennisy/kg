@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { CreateNodeUseCase } from './create-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Crawler } from '../ports/crawler.js';
-import type { AnyNode } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 
 const mockRepository: NodeRepository = {
   save: async (node: AnyNode) => Promise.resolve(),

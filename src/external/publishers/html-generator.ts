@@ -1,5 +1,5 @@
 import { marked } from 'marked';
-import type { AnyNode } from '../../domain/node.js';
+import type { AnyNode } from '../../domain/types.js';
 import type {
   SiteGenerator,
   SiteFile,

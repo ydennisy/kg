@@ -1,4 +1,4 @@
-import type { AnyNode, NodeType } from '../domain/node.js';
+import type { AnyNode, NodeType } from '../domain/types.js';
 import type {
   AnyNodeRecord,
   NodeRecord,
