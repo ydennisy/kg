@@ -1,7 +1,7 @@
-import { describe, test, beforeEach, afterEach, expect } from 'vitest';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import { randomUUID } from 'node:crypto';
 import { NodeMapper } from '../../adapters/node-mapper.js';
@@ -17,25 +17,27 @@ import {
   type DatabaseClient,
 } from '../../external/database/client.js';
 
-let db: DatabaseClient;
-let repository: SqliteNodeRepository;
-let outputDir: string;
-
-beforeEach(async () => {
-  db = createDatabaseClient(':memory:');
-  await migrate(db, { migrationsFolder: './drizzle' });
-
-  const mapper = new NodeMapper();
-  repository = new SqliteNodeRepository(db, mapper);
-
-  outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'publish-test-'));
-});
-
-afterEach(async () => {
-  await fs.rm(outputDir, { recursive: true, force: true });
-});
-
 describe('PublishSiteUseCase', () => {
+  let db: DatabaseClient;
+  let repository: SqliteNodeRepository;
+  let outputDir: string;
+  let dbFile: string;
+
+  beforeEach(async () => {
+    // Use a temp file vs in memory to allow for transactions to work
+    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
+    db = createDatabaseClient(`file:${dbFile}`);
+    await migrate(db, { migrationsFolder: './drizzle' });
+
+    const mapper = new NodeMapper();
+    repository = new SqliteNodeRepository(db, mapper);
+
+    outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'publish-test-'));
+  });
+
+  afterEach(async () => {
+    await fs.rm(outputDir, { recursive: true, force: true });
+  });
   test('publishes only public nodes and generates correct files', async () => {
     const publicNote = NoteNode.create({
       title: 'Public Note',

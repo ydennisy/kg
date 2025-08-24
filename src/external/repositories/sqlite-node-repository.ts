@@ -16,7 +16,7 @@ import type {
 } from '../../application/ports/node-repository.js';
 import type { AnyNode, EdgeType } from '../../domain/types.js';
 
-export class SqliteNodeRepository implements NodeRepository {
+class SqliteNodeRepository implements NodeRepository {
   constructor(
     private db: DatabaseClient,
     private mapper: NodeMapper
@@ -123,3 +123,5 @@ export class SqliteNodeRepository implements NodeRepository {
     }));
   }
 }
+
+export { SqliteNodeRepository };
