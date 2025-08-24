@@ -10,8 +10,7 @@ const mockRepository: NodeRepository = {
   update: async (node: AnyNode) => Promise.resolve(),
   findById: async (id: string) => Promise.resolve(null),
   findAll: async () => Promise.resolve([]),
-  search: async (query: string, withRelations?: boolean) =>
-    Promise.resolve([]),
+  search: async (query: string, withRelations?: boolean) => Promise.resolve([]),
   link: async (sourceId: string, targetId: string, type?) => Promise.resolve(),
   findDueFlashcards: async (date, limit) => Promise.resolve([]),
 };

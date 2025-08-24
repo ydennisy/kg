@@ -1,9 +1,9 @@
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { migrate } from 'drizzle-orm/libsql/migrator';
-import { randomUUID } from 'node:crypto';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';

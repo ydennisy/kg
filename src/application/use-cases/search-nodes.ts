@@ -13,6 +13,10 @@ class SearchNodesUseCase {
   ): Promise<
     { ok: true; result: Array<SearchResult> } | { ok: false; error: string }
   > {
+    if (!input.query.trim()) {
+      return { ok: true, result: [] };
+    }
+
     try {
       const result = await this.repository.search(
         input.query,
