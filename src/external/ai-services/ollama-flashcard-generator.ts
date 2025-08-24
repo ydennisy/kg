@@ -46,79 +46,79 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
       },
     ];
 
-    const messages = [
-      {
-        role: 'system',
-        content:
-          'You are an AI teacher. Read the document and create high-quality flashcards. ' +
-          'Only use the `create_flashcard` tool to output cards. Keep going, one card per tool call, ' +
-          'until there are no more good cards. When finished, reply with the single word DONE.',
-      },
-      { role: 'user', content: `Create flashcards for:\n---\n${text}` },
-    ];
+    // const messages = [
+    //   {
+    //     role: 'system',
+    //     content:
+    //       'You are an AI teacher. Read the document and create high-quality flashcards. ' +
+    //       'Only use the `create_flashcard` tool to output cards. Keep going, one card per tool call, ' +
+    //       'until there are no more good cards. When finished, reply with the single word DONE.',
+    //   },
+    //   { role: 'user', content: `Create flashcards for:\n---\n${text}` },
+    // ];
 
-    const flashcards: Array<Flashcard> = [];
+    // const flashcards: Array<Flashcard> = [];
 
-    while (true) {
-      const response = await ollama.chat({
-        model: 'gpt-oss:20b',
-        messages: messages,
-        think: 'low',
-        tools: tools,
-      });
+    // while (true) {
+    //   const response = await ollama.chat({
+    //     model: 'gpt-oss:20b',
+    //     messages: messages,
+    //     think: 'low',
+    //     tools: tools,
+    //   });
 
-      // Check if the model is done
-      const isDone =
-        response?.message?.content?.trim().toUpperCase() === 'DONE';
+    //   // Check if the model is done
+    //   const isDone =
+    //     response?.message?.content?.trim().toUpperCase() === 'DONE';
 
-      if (
-        (!response.message?.tool_calls ||
-          response.message?.tool_calls?.length === 0) &&
-        isDone
-      ) {
-        break;
-      }
 
-      // Execute any tool calls it requested
-      const toolCalls = response.message?.tool_calls ?? [];
-      if (toolCalls.length) {
-        messages.push(response.message);
-        for (const call of toolCalls) {
-          if (call.function?.name === 'create_flashcard') {
-            const card = call.function.arguments as Flashcard;
-            console.log(card);
+    //   if (
+    //     (!response.message?.tool_calls ||
+    //       response.message.tool_calls.length === 0) &&
+    //     isDone
+    //   ) {
+    //     break;
+    //   }
 
-            flashcards.push(card);
+    //   // Execute any tool calls it requested
+    //   if (response.message?.tool_calls?.length) {
+    //     messages.push(response.message);
+    //     for (const call of response.message.tool_calls) {
+    //       if (call.function?.name === 'create_flashcard') {
+    //         const card = call.function.arguments as Flashcard;
+    //         console.log(card);
 
-            // Provide a tool "result" message so the model knows it succeeded
-            messages.push({
-              role: 'tool',
-              // Ollama accepts role: 'tool'; does it accept an ID?
-              content: JSON.stringify({
-                status: 'ok',
-                index: flashcards.length,
-              }),
-            });
-          }
-        }
+    //         flashcards.push(card);
 
-        // Nudge it to continue
-        messages.push({
-          role: 'system',
-          content:
-            'Continue creating more unique, high-value flashcards. When no more remain, respond with DONE.',
-        });
-      } else {
-        // No tool calls and not "DONE" — give a gentle reminder
-        messages.push({
-          role: 'system',
-          content:
-            'Remember: output flashcards ONLY by calling the create_flashcard tool. Continue.',
-        });
-      }
-    }
+    //         // Provide a tool "result" message so the model knows it succeeded
+    //         messages.push({
+    //           role: 'tool',
+    //           // Ollama accepts role: 'tool'; does it accept an ID?
+    //           content: JSON.stringify({
+    //             status: 'ok',
+    //             index: flashcards.length,
+    //           }),
+    //         });
+    //       }
+    //     }
 
-    return flashcards;
+    //     // Nudge it to continue
+    //     messages.push({
+    //       role: 'system',
+    //       content:
+    //         'Continue creating more unique, high-value flashcards. When no more remain, respond with DONE.',
+    //     });
+    //   } else {
+    //     // No tool calls and not "DONE" — give a gentle reminder
+    //     messages.push({
+    //       role: 'system',
+    //       content:
+    //         'Remember: output flashcards ONLY by calling the create_flashcard tool. Continue.',
+    //     });
+    //   }
+    // }
+
+    // return flashcards;
   }
 }
 

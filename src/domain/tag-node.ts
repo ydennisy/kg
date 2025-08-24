@@ -3,6 +3,7 @@ import { BaseNode } from './base-node.js';
 
 type TagNodeData = {
   name: string;
+  description?: string;
 };
 
 interface TagNodeProps {
@@ -40,16 +41,17 @@ class TagNode extends BaseNode {
     return this.data.name;
   }
 
+  get description() {
+    return this.data.description;
+  }
+
   /**
    * Creates a new tag node with generated id and timestamps.
    *
    * @param input Object containing visibility and tag data.
    * @returns Newly created tag node.
    */
-  static create(input: {
-    isPublic: boolean;
-    data: TagNodeData;
-  }): TagNode {
+  static create(input: { isPublic: boolean; data: TagNodeData }): TagNode {
     const id = randomUUID();
     const now = new Date();
     return new TagNode({

@@ -13,6 +13,27 @@ import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-du
 import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
 
+// TODO: we should not need to duplicate this type
+type NodeInputData =
+  | {
+      type: 'flashcard';
+      data: { front: string; back: string };
+    }
+  | {
+      type: 'link';
+      title: string | undefined;
+      data: { url: string };
+    }
+  | {
+      type: 'note';
+      title: string;
+      data: { content: string };
+    }
+  | {
+      type: 'tag';
+      data: { name: string; description?: string };
+    };
+
 export class CLI {
   private program: Command;
 
@@ -88,6 +109,9 @@ export class CLI {
           { name: 'Flashcard', value: 'flashcard' as NodeType },
         ],
       });
+     
+      // Step 2: Collect data based on node type
+      const input = await this.collectNodeInput(nodeType);
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
@@ -95,47 +119,11 @@ export class CLI {
         default: false,
       });
 
-      let result;
-      switch (nodeType) {
-        case 'note': {
-          const input = await this.collectNodeInput('note');
-          result = await this.createNodeUseCase.execute({
-            type: 'note',
-            title: input.title,
-            data: input.data,
-            isPublic,
-          });
-          break;
-        }
-        case 'link': {
-          const input = await this.collectNodeInput('link');
-          result = await this.createNodeUseCase.execute({
-            type: 'link',
-            title: input.title,
-            data: input.data,
-            isPublic,
-          });
-          break;
-        }
-        case 'tag': {
-          const input = await this.collectNodeInput('tag');
-          result = await this.createNodeUseCase.execute({
-            type: 'tag',
-            data: input.data,
-            isPublic,
-          });
-          break;
-        }
-        case 'flashcard': {
-          const input = await this.collectNodeInput('flashcard');
-          result = await this.createNodeUseCase.execute({
-            type: 'flashcard',
-            data: input.data,
-            isPublic,
-          });
-          break;
-        }
-      }
+      // Step 4: Create the node
+      const result = await this.createNodeUseCase.execute({
+        ...input,
+        isPublic,
+      });
 
       if (result && result.ok) {
         console.log(`✅ Created ${nodeType} node with ID: ${result.result.id}`);
@@ -286,10 +274,10 @@ export class CLI {
 
     for (const id of createdIds) {
       const linkRes = await this.linkNodesUseCase.execute({
-        sourceId: nodeId,
-        targetId: id,
-        type: 'related_to',
-        isBidirectional: true,
+        fromId: nodeId,
+        toId: id,
+        type: 'related_to', // TODO: ask the user
+        isBidirectional: true, // TODO: ask the user
       });
       if (!linkRes.ok) {
         console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
@@ -441,21 +429,8 @@ export class CLI {
     return selectedFlashcards;
   }
 
-  private async collectNodeInput(
-    nodeType: 'note'
-  ): Promise<{ title: string; data: { content: string } }>;
-  private async collectNodeInput(
-    nodeType: 'link'
-  ): Promise<{ title?: string; data: { url: string } }>;
-  private async collectNodeInput(
-    nodeType: 'tag'
-  ): Promise<{ data: { name: string } }>;
-  private async collectNodeInput(
-    nodeType: 'flashcard'
-  ): Promise<{ data: { front: string; back: string } }>;
-  private async collectNodeInput(
-    nodeType: NodeType
-  ): Promise<{ title?: string; data: Record<string, unknown> }> {
+
+  private async collectNodeInput(nodeType: NodeType): Promise<NodeInputData> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -469,7 +444,7 @@ export class CLI {
             waitForUseInput: false,
           }),
         };
-        return { title, data };
+        return { type: 'note', title, data };
       }
 
       case 'link': {
@@ -484,7 +459,11 @@ export class CLI {
           message: 'Enter a title, or leave blank to use URL title:',
           default: '',
         });
-        return { title, data };
+        return {
+          type: 'link',
+          title: title.trim() === '' ? undefined : title,
+          data,
+        };
       }
 
       case 'tag': {
@@ -494,8 +473,14 @@ export class CLI {
             validate: (value: string) =>
               value.trim().length > 0 || 'Name is required',
           }),
+          description: await editor({
+            message: 'Enter tag description (optional, opens editor):',
+            default: '',
+            waitForUseInput: false,
+          }),
         };
-        return { data };
+
+        return { type: 'tag', data };
       }
 
       case 'flashcard': {
@@ -511,7 +496,7 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
-        return { data };
+        return { type: 'flashcard', data };
       }
 
       default:
@@ -618,8 +603,8 @@ export class CLI {
       if (selectedNodes.length > 0) {
         for (const targetNodeId of selectedNodes) {
           const linkResult = await this.linkNodesUseCase.execute({
-            sourceId: newNodeId,
-            targetId: targetNodeId,
+            fromId: newNodeId,
+            toId: targetNodeId,
             type: 'related_to',
             isBidirectional: true,
           });

@@ -1,6 +1,6 @@
 {
-  "id": "8d957de6-ad13-4c2f-9a3b-9030924a77f8",
-  "prevId": "a8281a4b-6418-46b9-a241-51e69ede6dee",
+  "id": "ec3ba0e5-9193-467e-a83e-48b6d75ecd52",
+  "prevId": "3e480314-a470-4415-946c-04d1a494ae75",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -14,15 +14,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "source_id": {
-          "name": "source_id",
+        "from_id": {
+          "name": "from_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "target_id": {
-          "name": "target_id",
+        "to_id": {
+          "name": "to_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -35,6 +35,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "is_bidirectional": {
+          "name": "is_bidirectional",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -44,35 +51,36 @@
         }
       },
       "indexes": {
-        "edges_source_idx": {
-          "name": "edges_source_idx",
+        "edges_from_idx": {
+          "name": "edges_from_idx",
           "columns": [
-            "source_id"
+            "from_id"
           ],
           "isUnique": false
         },
-        "edges_target_idx": {
-          "name": "edges_target_idx",
+        "edges_to_idx": {
+          "name": "edges_to_idx",
           "columns": [
-            "target_id"
+            "to_id"
           ],
           "isUnique": false
         },
-        "edges_unique_idx_source_target": {
-          "name": "edges_unique_idx_source_target",
+        "edges_unique_idx_from_to_type": {
+          "name": "edges_unique_idx_from_to_type",
           "columns": [
-            "source_id",
-            "target_id"
+            "from_id",
+            "to_id",
+            "type"
           ],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "edges_source_id_nodes_id_fk": {
-          "name": "edges_source_id_nodes_id_fk",
+        "edges_from_id_nodes_id_fk": {
+          "name": "edges_from_id_nodes_id_fk",
           "tableFrom": "edges",
           "columnsFrom": [
-            "source_id"
+            "from_id"
           ],
           "tableTo": "nodes",
           "columnsTo": [
@@ -81,11 +89,11 @@
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
-        "edges_target_id_nodes_id_fk": {
-          "name": "edges_target_id_nodes_id_fk",
+        "edges_to_id_nodes_id_fk": {
+          "name": "edges_to_id_nodes_id_fk",
           "tableFrom": "edges",
           "columnsFrom": [
-            "target_id"
+            "to_id"
           ],
           "tableTo": "nodes",
           "columnsTo": [

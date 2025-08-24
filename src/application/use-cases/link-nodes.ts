@@ -2,10 +2,10 @@ import type { EdgeType } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 
 type LinkNodesInput = {
-  sourceId: string;
-  targetId: string;
+  fromId: string;
+  toId: string;
   type: EdgeType;
-  isBidirectional?: boolean;
+  isBidirectional: boolean;
 };
 
 class LinkNodesUseCase {
@@ -14,10 +14,10 @@ class LinkNodesUseCase {
   async execute(input: LinkNodesInput) {
     try {
       await this.repository.link(
-        input.sourceId,
-        input.targetId,
+        input.fromId,
+        input.toId,
         input.type,
-        input.isBidirectional ?? false
+        input.isBidirectional
       );
       return { ok: true as const };
     } catch (err) {

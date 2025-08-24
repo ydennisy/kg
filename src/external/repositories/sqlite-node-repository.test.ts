@@ -161,4 +161,73 @@ describe('SqliteNodeRepository', () => {
     const results = await repository.search('irrelevant');
     expect(results.length).toBe(0);
   });
+
+  test('bidirectional relationships are retrieved', async () => {
+    const first = NoteNode.create({
+      title: 'First',
+      isPublic: false,
+      data: { content: 'First node' },
+    });
+    const second = NoteNode.create({
+      title: 'Second',
+      isPublic: false,
+      data: { content: 'Second node' },
+    });
+
+    await repository.save(first);
+    await repository.save(second);
+    await repository.link(first.id, second.id, 'related_to', true);
+
+    const retrievedFirst = await repository.findById(first.id, true);
+    const retrievedSecond = await repository.findById(second.id, true);
+
+    expect(retrievedFirst?.relatedNodes).toHaveLength(1);
+    expect(retrievedFirst?.relatedNodes[0]?.node.id).toBe(second.id);
+    expect(retrievedFirst?.relatedNodes[0]?.relationship).toEqual({
+      type: 'related_to',
+      direction: 'both',
+    });
+
+    expect(retrievedSecond?.relatedNodes).toHaveLength(1);
+    expect(retrievedSecond?.relatedNodes[0]?.node.id).toBe(first.id);
+    expect(retrievedSecond?.relatedNodes[0]?.relationship).toEqual({
+      type: 'related_to',
+      direction: 'both',
+    });
+  });
+
+  test('non-bidirectional relationships are retrieved', async () => {
+    const parent = NoteNode.create({
+      title: 'Parent',
+      isPublic: false,
+      data: { content: 'Parent node' },
+    });
+    const child = NoteNode.create({
+      title: 'Child',
+      isPublic: false,
+      data: { content: 'Child node' },
+    });
+
+    await repository.save(parent);
+    await repository.save(child);
+
+    await repository.link(parent.id, child.id, 'contains', false);
+
+    const retrievedParent = await repository.findById(parent.id, true);
+    const retrievedChild = await repository.findById(child.id, true);
+
+    expect(retrievedParent?.relatedNodes).toHaveLength(1);
+    expect(retrievedParent?.relatedNodes[0]?.node.id).toBe(child.id);
+    expect(retrievedParent?.relatedNodes[0]?.relationship).toEqual({
+      type: 'contains',
+      direction: 'from',
+    });
+
+    expect(retrievedChild?.relatedNodes).toHaveLength(1);
+    expect(retrievedChild?.relatedNodes[0]?.node.id).toBe(parent.id);
+    expect(retrievedChild?.relatedNodes[0]?.relationship).toEqual({
+      type: 'contains',
+      direction: 'to',
+    });
+  });
 });

@@ -187,8 +187,11 @@ class SqliteNodeRepository implements NodeRepository {
           node: relatedNode,
           relationship: {
             type: edge.type,
-            direction:
-              edge.fromId === id ? 'from' : edge.toId === id ? 'to' : 'both',
+            direction: edge.isBidirectional
+              ? 'both'
+              : edge.fromId === id
+                ? 'from'
+                : 'to',
           },
         });
       }

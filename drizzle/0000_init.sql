@@ -1,16 +1,17 @@
 CREATE TABLE `edges` (
 	`id` text PRIMARY KEY NOT NULL,
-	`source_id` text NOT NULL,
-	`target_id` text NOT NULL,
+	`from_id` text NOT NULL,
+	`to_id` text NOT NULL,
 	`type` text,
+	`is_bidirectional` integer NOT NULL,
 	`created_at` text NOT NULL,
-	FOREIGN KEY (`source_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`target_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`from_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`to_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `edges_source_idx` ON `edges` (`source_id`);--> statement-breakpoint
-CREATE INDEX `edges_target_idx` ON `edges` (`target_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `edges_unique_idx_source_target` ON `edges` (`source_id`,`target_id`);--> statement-breakpoint
+CREATE INDEX `edges_from_idx` ON `edges` (`from_id`);--> statement-breakpoint
+CREATE INDEX `edges_to_idx` ON `edges` (`to_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `edges_unique_idx_from_to_type` ON `edges` (`from_id`,`to_id`,`type`);--> statement-breakpoint
 CREATE TABLE `flashcard_nodes` (
 	`node_id` text PRIMARY KEY NOT NULL,
 	`front` text NOT NULL,

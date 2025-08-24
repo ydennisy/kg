@@ -28,7 +28,7 @@ type CreateNodeInput =
   | {
       type: 'tag';
       isPublic: boolean;
-      data: { name: string };
+      data: { name: string; description?: string };
     };
 
 class CreateNodeUseCase {
@@ -88,3 +88,4 @@ class CreateNodeUseCase {
 }
 
 export { CreateNodeUseCase };
+export type { CreateNodeInput };
