@@ -6,6 +6,7 @@ import {
   index,
   unique,
 } from 'drizzle-orm/sqlite-core';
+import { EDGE_TYPES } from '../../domain/edge-types.js';
 
 const nodesTable = sqliteTable(
   'nodes',
@@ -73,32 +74,27 @@ const edgesTable = sqliteTable(
   'edges',
   {
     id: text('id').primaryKey(),
-    sourceId: text('source_id')
+    fromId: text('from_id')
       .notNull()
       .references(() => nodesTable.id, {
         onDelete: 'cascade',
       }),
-    targetId: text('target_id')
+    toId: text('to_id')
       .notNull()
       .references(() => nodesTable.id, {
         onDelete: 'cascade',
       }),
     type: text('type', {
-      enum: [
-        'references',
-        'contains',
-        'tagged_with',
-        'similar_to',
-        'responds_to',
-      ],
+      enum: EDGE_TYPES,
     }),
+    isBidirectional: integer('is_bidirectional', { mode: 'boolean' }).notNull(),
     createdAt: text('created_at').notNull(),
   },
   (t) => [
-    // Prevent duplicate edges of the same (source, target)
-    unique('edges_unique_idx_source_target').on(t.sourceId, t.targetId),
-    index('edges_source_idx').on(t.sourceId),
-    index('edges_target_idx').on(t.targetId),
+    // Prevent duplicate edges of the same (from, to, type)
+    unique('edges_unique_idx_from_to_type').on(t.fromId, t.toId, t.type),
+    index('edges_from_idx').on(t.fromId),
+    index('edges_to_idx').on(t.toId),
   ]
 );
 
@@ -120,8 +116,8 @@ const nodesRelations = relations(nodesTable, ({ one, many }) => ({
     fields: [nodesTable.id],
     references: [flashcardNodesTable.nodeId],
   }),
-  edgeSource: many(edgesTable, { relationName: 'edge_source' }),
-  edgeTarget: many(edgesTable, { relationName: 'edge_target' }),
+  from: many(edgesTable, { relationName: 'edge_from' }),
+  to: many(edgesTable, { relationName: 'edge_to' }),
 }));
 
 const noteNodesRelations = relations(noteNodesTable, ({ one }) => ({
@@ -154,15 +150,15 @@ const flashcardNodesRelations = relations(flashcardNodesTable, ({ one }) => ({
 
 // An edge points to one source node and one target node
 const edgesRelations = relations(edgesTable, ({ one }) => ({
-  source: one(nodesTable, {
-    fields: [edgesTable.sourceId],
+  from: one(nodesTable, {
+    fields: [edgesTable.fromId],
     references: [nodesTable.id],
-    relationName: 'edge_source',
+    relationName: 'edge_from',
   }),
-  target: one(nodesTable, {
-    fields: [edgesTable.targetId],
+  to: one(nodesTable, {
+    fields: [edgesTable.toId],
     references: [nodesTable.id],
-    relationName: 'edge_target',
+    relationName: 'edge_to',
   }),
 }));
 
