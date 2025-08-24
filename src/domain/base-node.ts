@@ -1,4 +1,4 @@
-import type { NodeType } from './node-types.js';
+import type { AnyNode, NodeType, EdgeType } from './types.js';
 
 /**
  * Base class for all node types in the knowledge graph.
@@ -10,6 +10,17 @@ abstract class BaseNode {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly isPublic: boolean;
+
+  private _relatedNodes: Map<
+    string,
+    {
+      node: AnyNode;
+      relationship: {
+        type: EdgeType;
+        direction: 'from' | 'to' | 'both';
+      };
+    }
+  > = new Map();
 
   /**
    * Gets the human readable title for the node.
@@ -25,6 +36,13 @@ abstract class BaseNode {
    */
   abstract get searchableContent(): string;
 
+  get relatedNodes(): ReadonlyArray<{
+    node: AnyNode;
+    relationship: { type: EdgeType; direction: 'from' | 'to' | 'both' };
+  }> {
+    return Array.from(this._relatedNodes.values());
+  }
+
   constructor(props: {
     id: string;
     version: number;
@@ -37,6 +55,10 @@ abstract class BaseNode {
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.isPublic = props.isPublic;
+  }
+
+  setRelatedNodes(related: typeof this._relatedNodes) {
+    this._relatedNodes = related;
   }
 }
 

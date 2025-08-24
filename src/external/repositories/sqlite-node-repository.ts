@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { eq, or, inArray, sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import {
   nodesTable,
@@ -45,12 +45,18 @@ class SqliteNodeRepository implements NodeRepository {
   }
 
   // TODO: this is temporary helper to add edges until it is handled properly in the domain
-  async link(sourceId: string, targetId: string, type?: EdgeType) {
+  async link(
+    fromId: string,
+    toId: string,
+    type: EdgeType,
+    isBidirectional: boolean
+  ) {
     await this.db.insert(edgesTable).values({
       id: randomUUID(),
-      sourceId,
-      targetId,
-      type: type ?? null,
+      fromId,
+      toId,
+      type,
+      isBidirectional,
       createdAt: new Date().toISOString(),
     });
   }
@@ -68,7 +74,10 @@ class SqliteNodeRepository implements NodeRepository {
     return results.map((result) => this.mapper.toDomain(result));
   }
 
-  async findById(id: string): Promise<AnyNode | null> {
+  async findById(
+    id: string,
+    withRelation: boolean = false
+  ): Promise<AnyNode | null> {
     const result = await this.db.query.nodesTable.findFirst({
       where: eq(nodesTable.id, id),
       with: {
@@ -81,7 +90,50 @@ class SqliteNodeRepository implements NodeRepository {
 
     if (!result) return null;
 
-    return this.mapper.toDomain(result);
+    const node = this.mapper.toDomain(result);
+
+    // No relations required so we return just the node
+    if (!withRelation) {
+      return node;
+    }
+
+    // TODO: optimise this query by using the DB more and reducing round trips
+    // Fetch edges
+    const edges = await this.db.query.edgesTable.findMany({
+      where: or(eq(edgesTable.fromId, id), eq(edgesTable.toId, id)),
+    });
+
+    // Fetch the actual related nodes
+    const relatedNodeIds = edges.map((e) =>
+      e.fromId === id ? e.toId : e.fromId
+    );
+
+    const relatedNodes = await this.db.query.nodesTable.findMany({
+      where: inArray(nodesTable.id, relatedNodeIds),
+      with: { noteNode: true, linkNode: true /* etc */ },
+    });
+
+    // Map to domain objects and attach to node
+    const relatedMap = new Map();
+    for (const edge of edges) {
+      const relatedNodeRecord = relatedNodes.find(
+        (n) => n.id === (edge.fromId === id ? edge.toId : edge.fromId)
+      );
+      if (relatedNodeRecord) {
+        const relatedNode = this.mapper.toDomain(relatedNodeRecord);
+        relatedMap.set(relatedNode.id, {
+          node: relatedNode,
+          relationship: {
+            type: edge.type,
+            direction:
+              edge.fromId === id ? 'from' : edge.toId === id ? 'to' : 'both',
+          },
+        });
+      }
+    }
+
+    node.setRelatedNodes(relatedMap);
+    return node;
   }
 
   async search(query: string): Promise<SearchResult[]> {

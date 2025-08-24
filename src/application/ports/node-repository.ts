@@ -10,9 +10,14 @@ type SearchResult = {
 
 interface NodeRepository {
   save(node: AnyNode): Promise<void>;
-  link(sourceId: string, targetId: string, type?: EdgeType): Promise<void>;
+  link(
+    sourceId: string,
+    targetId: string,
+    type: EdgeType,
+    isBidirectional: boolean
+  ): Promise<void>;
   findAll(): Promise<AnyNode[]>;
-  findById(id: string): Promise<AnyNode | null>;
+  findById(id: string, withRelations: boolean): Promise<AnyNode | null>;
   search(query: string): Promise<SearchResult[]>;
 }
 
