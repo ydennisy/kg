@@ -9,7 +9,6 @@ import type { Crawler } from '../ports/crawler.js';
 type CreateNodeInput =
   | {
       type: 'flashcard';
-      title?: string | undefined;
       isPublic: boolean;
       data: { front: string; back: string };
     }
