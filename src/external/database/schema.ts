@@ -6,7 +6,10 @@ import {
   index,
   unique,
 } from 'drizzle-orm/sqlite-core';
-import { EDGE_TYPES } from '../../domain/edge-types.js';
+
+// FIXME: the import does not work when generating migrations
+// import { EDGE_TYPES } from '../../domain/edge-types.js';
+const EDGE_TYPES = ['related_to', 'contains', 'tagged_with'] as const;
 
 const nodesTable = sqliteTable(
   'nodes',
