@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BaseNode } from './base-node.js';
 
 type NoteNodeData = {
   content: string;
@@ -14,25 +15,16 @@ interface NoteNodeProps {
   data: NoteNodeData;
 }
 
-class NoteNode {
-  readonly id: string;
+class NoteNode extends BaseNode {
   readonly type: 'note';
-  readonly version: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly isPublic: boolean;
   private _title: string;
-  private _data: NoteNodeData;
+  readonly data: NoteNodeData;
 
   constructor(input: NoteNodeProps) {
-    this.id = input.id;
+    super(input);
     this.type = 'note';
-    this.version = input.version;
-    this.createdAt = input.createdAt;
-    this.updatedAt = input.updatedAt;
-    this.isPublic = input.isPublic;
     this._title = input.title;
-    this._data = input.data;
+    this.data = input.data;
   }
 
   get title() {
@@ -40,7 +32,7 @@ class NoteNode {
   }
 
   get content() {
-    return this._data.content;
+    return this.data.content;
   }
 
   static create(input: {

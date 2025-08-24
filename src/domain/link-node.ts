@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BaseNode } from './base-node.js';
 
 type LinkNodeData = {
   url: string;
@@ -19,25 +20,16 @@ interface LinkNodeProps {
   data: LinkNodeData;
 }
 
-class LinkNode {
-  readonly id: string;
+class LinkNode extends BaseNode {
   readonly type: 'link';
-  readonly version: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly isPublic: boolean;
-  readonly data: LinkNodeData;
   private _title: string | undefined;
+  readonly data: LinkNodeData;
 
   constructor(input: LinkNodeProps) {
-    this.id = input.id;
+    super(input);
     this.type = 'link';
-    this.version = input.version;
-    this.createdAt = input.createdAt;
-    this.updatedAt = input.updatedAt;
-    this.isPublic = input.isPublic;
-    this.data = input.data;
     this._title = input.title;
+    this.data = input.data;
   }
 
   get title() {

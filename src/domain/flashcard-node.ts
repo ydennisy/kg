@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BaseNode } from './base-node.js';
 
 type FlashcardNodeData = {
   front: string;
@@ -14,22 +15,13 @@ interface FlashcardNodeProps {
   data: FlashcardNodeData;
 }
 
-class FlashcardNode {
-  readonly id: string;
+class FlashcardNode extends BaseNode {
   readonly type: 'flashcard';
-  readonly version: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly isPublic: boolean;
   readonly data: FlashcardNodeData;
 
   constructor(input: FlashcardNodeProps) {
-    this.id = input.id;
+    super(input);
     this.type = 'flashcard';
-    this.version = input.version;
-    this.createdAt = input.createdAt;
-    this.updatedAt = input.updatedAt;
-    this.isPublic = input.isPublic;
     this.data = input.data;
   }
 

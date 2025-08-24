@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { BaseNode } from './base-node.js';
 
 type TagNodeData = {
   name: string;
@@ -13,22 +14,13 @@ interface TagNodeProps {
   data: TagNodeData;
 }
 
-class TagNode {
-  readonly id: string;
+class TagNode extends BaseNode {
   readonly type: 'tag';
-  readonly version: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly isPublic: boolean;
   readonly data: TagNodeData;
 
   constructor(input: TagNodeProps) {
-    this.id = input.id;
+    super(input);
     this.type = 'tag';
-    this.version = input.version;
-    this.createdAt = input.createdAt;
-    this.updatedAt = input.updatedAt;
-    this.isPublic = input.isPublic;
     this.data = input.data;
   }
 
