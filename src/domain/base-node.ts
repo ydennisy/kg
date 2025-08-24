@@ -1,3 +1,6 @@
+/**
+ * Base class for all node types in the knowledge graph.
+ */
 abstract class BaseNode {
   readonly id: string;
   abstract readonly type: 'note' | 'link' | 'tag' | 'flashcard';
@@ -5,6 +8,12 @@ abstract class BaseNode {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly isPublic: boolean;
+
+  /**
+   * Gets the human readable title for the node.
+   *
+   * @returns Node title.
+   */
   abstract get title(): string;
 
   constructor(props: {

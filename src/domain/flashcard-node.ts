@@ -15,6 +15,9 @@ interface FlashcardNodeProps {
   data: FlashcardNodeData;
 }
 
+/**
+ * Node representing a flashcard with front and back text.
+ */
 class FlashcardNode extends BaseNode {
   readonly type: 'flashcard';
   readonly data: FlashcardNodeData;
@@ -25,10 +28,21 @@ class FlashcardNode extends BaseNode {
     this.data = input.data;
   }
 
+  /**
+   * Gets the front text which acts as the flashcard's title.
+   *
+   * @returns Flashcard front text.
+   */
   get title() {
     return this.data.front;
   }
 
+  /**
+   * Creates a new flashcard node with generated id and timestamps.
+   *
+   * @param input Object containing visibility and flashcard data.
+   * @returns Newly created flashcard node.
+   */
   static create(input: {
     isPublic: boolean;
     title?: string;
@@ -46,6 +60,12 @@ class FlashcardNode extends BaseNode {
     });
   }
 
+  /**
+   * Recreates a flashcard node from persisted properties.
+   *
+   * @param input Complete flashcard node properties.
+   * @returns Hydrated flashcard node instance.
+   */
   static hydrate(input: FlashcardNodeProps): FlashcardNode {
     return new FlashcardNode(input);
   }
