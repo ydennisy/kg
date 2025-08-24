@@ -31,7 +31,6 @@ class FlashcardNode extends BaseNode {
 
   static create(input: {
     isPublic: boolean;
-    title?: string;
     data: FlashcardNodeData;
   }): FlashcardNode {
     const id = randomUUID();

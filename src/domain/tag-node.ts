@@ -30,7 +30,6 @@ class TagNode extends BaseNode {
 
   static create(input: {
     isPublic: boolean;
-    title?: string;
     data: TagNodeData;
   }): TagNode {
     const id = randomUUID();
