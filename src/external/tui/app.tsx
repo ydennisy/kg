@@ -2,16 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp } from 'ink';
 import SelectInput from 'ink-select-input';
 import TextInput from 'ink-text-input';
-import type { NodeType } from '../../domain/node.js';
+import type { NodeType } from '../../domain/types.js';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
+import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-due-flashcards.js';
+import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
+import type { FlashcardNode } from '../../domain/flashcard-node.js';
+import { MarkdownEditor } from './markdown-editor.js';
 
-type Screen = 'menu' | 'create' | 'search' | 'flashcards' | 'publish' | 'exit';
+type Screen =
+  | 'menu'
+  | 'create'
+  | 'search'
+  | 'flashcards'
+  | 'review'
+  | 'publish'
+  | 'exit';
 
 export type AppProps = {
   createNodeUseCase: CreateNodeUseCase;
@@ -20,6 +31,8 @@ export type AppProps = {
   getNodeUseCase: GetNodeUseCase;
   generateFlashcardsUseCase: GenerateFlashcardsUseCase;
   publishSiteUseCase: PublishSiteUseCase;
+  getDueFlashcardsUseCase: GetDueFlashcardsUseCase;
+  reviewFlashcardUseCase: ReviewFlashcardUseCase;
 };
 
 const Menu: React.FC<{ onSelect: (s: Screen) => void }> = ({ onSelect }) => {
@@ -27,6 +40,7 @@ const Menu: React.FC<{ onSelect: (s: Screen) => void }> = ({ onSelect }) => {
     { label: 'Create Node', value: 'create' },
     { label: 'Search Nodes', value: 'search' },
     { label: 'Generate Flashcards', value: 'flashcards' },
+    { label: 'Review Flashcards', value: 'review' },
     { label: 'Publish Site', value: 'publish' },
     { label: 'Exit', value: 'exit' },
   ];
@@ -49,6 +63,8 @@ export const App: React.FC<AppProps> = (props) => {
       return <SearchNodes {...props} onDone={() => setScreen('menu')} />;
     case 'flashcards':
       return <GenerateFlashcards {...props} onDone={() => setScreen('menu')} />;
+    case 'review':
+      return <ReviewFlashcards {...props} onDone={() => setScreen('menu')} />;
     case 'publish':
       return <PublishSite {...props} onDone={() => setScreen('menu')} />;
     default:
@@ -96,7 +112,12 @@ const CreateNode: React.FC<CreateNodeProps> = ({
           .map((s) => s.trim())
           .filter(Boolean);
         for (const id of ids) {
-          await linkNodesUseCase.execute({ sourceId: newId, targetId: id });
+          await linkNodesUseCase.execute({
+            fromId: newId,
+            toId: id,
+            type: 'related_to',
+            isBidirectional: true,
+          });
         }
         setStatus(`Linked ${ids.length} nodes.`);
         setStep('done');
@@ -170,17 +191,13 @@ const CreateNode: React.FC<CreateNodeProps> = ({
   }
   if (step === 'content') {
     return (
-      <Box flexDirection="column">
-        <Text>Enter note content:</Text>
-        <TextInput
-          value={data.content || ''}
-          onChange={(v) => setData({ ...data, content: v })}
-          onSubmit={(v) => {
-            setData({ ...data, content: v });
-            setStep('isPublic');
-          }}
-        />
-      </Box>
+      <MarkdownEditor
+        initialValue={data.content}
+        onSubmit={(v) => {
+          setData({ ...data, content: v });
+          setStep('isPublic');
+        }}
+      />
     );
   }
   if (step === 'url') {
@@ -420,8 +437,10 @@ const GenerateFlashcards: React.FC<FlashcardProps> = ({
           });
           if (save.ok) {
             await linkNodesUseCase.execute({
-              sourceId: nodeId,
-              targetId: save.result.id,
+              fromId: nodeId,
+              toId: save.result.id,
+              type: 'related_to',
+              isBidirectional: true,
             });
           }
         }
@@ -510,6 +529,105 @@ const GenerateFlashcards: React.FC<FlashcardProps> = ({
     );
   }
   return null;
+};
+
+// ---------- Review Flashcards ----------
+
+type ReviewProps = AppProps & { onDone: () => void };
+
+const ReviewFlashcards: React.FC<ReviewProps> = ({
+  getDueFlashcardsUseCase,
+  reviewFlashcardUseCase,
+  onDone,
+}) => {
+  const [cards, setCards] = useState<FlashcardNode[]>([]);
+  const [index, setIndex] = useState(0);
+  const [showBack, setShowBack] = useState(false);
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    const run = async () => {
+      if (cards.length === 0 && status === '') {
+        const res = await getDueFlashcardsUseCase.execute({ limit: 20 });
+        if (res.ok) {
+          setCards(res.result);
+        } else {
+          setStatus(res.error);
+        }
+      }
+    };
+    run();
+  }, [cards, status, getDueFlashcardsUseCase]);
+
+  if (status && cards.length === 0) {
+    return (
+      <Box flexDirection="column">
+        <Text>{status}</Text>
+        <Text>Press enter to return.</Text>
+        <TextInput value="" onSubmit={() => onDone()} />
+      </Box>
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <Box flexDirection="column">
+        <Text>No flashcards due.</Text>
+        <Text>Press enter to return.</Text>
+        <TextInput value="" onSubmit={() => onDone()} />
+      </Box>
+    );
+  }
+
+  const card = cards[index];
+  if (!card) {
+    return (
+      <Box flexDirection="column">
+        <Text>Review session complete.</Text>
+        <Text>Press enter to return.</Text>
+        <TextInput value="" onSubmit={() => onDone()} />
+      </Box>
+    );
+  }
+
+  if (!showBack) {
+    return (
+      <Box flexDirection="column">
+        <Text>
+          Card {index + 1} of {cards.length}
+        </Text>
+        <Text>Front: {card.data.front}</Text>
+        <Text>Press enter to reveal the back.</Text>
+        <TextInput value="" onSubmit={() => setShowBack(true)} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box flexDirection="column">
+      <Text>
+        Card {index + 1} of {cards.length}
+      </Text>
+      <Text>Front: {card.data.front}</Text>
+      <Text>Back: {card.data.back}</Text>
+      <SelectInput
+        items={[
+          { label: 'Again', value: 0 },
+          { label: 'Hard', value: 3 },
+          { label: 'Good', value: 4 },
+          { label: 'Easy', value: 5 },
+        ]}
+        onSelect={async (item) => {
+          await reviewFlashcardUseCase.execute({
+            flashcard: card,
+            quality: item.value as number,
+          });
+          setIndex(index + 1);
+          setShowBack(false);
+        }}
+      />
+    </Box>
+  );
 };
 
 // ---------- Publish Site ----------

@@ -1,6 +1,6 @@
 {
-  "id": "2dca4e35-43df-4c4b-a5e1-2fb350a0be76",
-  "prevId": "13c4775f-a901-4401-aba9-3a27d02e923c",
+  "id": "ec3ba0e5-9193-467e-a83e-48b6d75ecd52",
+  "prevId": "3e480314-a470-4415-946c-04d1a494ae75",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -14,15 +14,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "source_id": {
-          "name": "source_id",
+        "from_id": {
+          "name": "from_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "target_id": {
-          "name": "target_id",
+        "to_id": {
+          "name": "to_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -35,6 +35,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "is_bidirectional": {
+          "name": "is_bidirectional",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -44,38 +51,166 @@
         }
       },
       "indexes": {
-        "edges_source_idx": {
-          "name": "edges_source_idx",
-          "columns": ["source_id"],
+        "edges_from_idx": {
+          "name": "edges_from_idx",
+          "columns": [
+            "from_id"
+          ],
           "isUnique": false
         },
-        "edges_target_idx": {
-          "name": "edges_target_idx",
-          "columns": ["target_id"],
+        "edges_to_idx": {
+          "name": "edges_to_idx",
+          "columns": [
+            "to_id"
+          ],
           "isUnique": false
         },
-        "edges_unique_idx_source_target": {
-          "name": "edges_unique_idx_source_target",
-          "columns": ["source_id", "target_id"],
+        "edges_unique_idx_from_to_type": {
+          "name": "edges_unique_idx_from_to_type",
+          "columns": [
+            "from_id",
+            "to_id",
+            "type"
+          ],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "edges_source_id_nodes_id_fk": {
-          "name": "edges_source_id_nodes_id_fk",
+        "edges_from_id_nodes_id_fk": {
+          "name": "edges_from_id_nodes_id_fk",
           "tableFrom": "edges",
-          "columnsFrom": ["source_id"],
+          "columnsFrom": [
+            "from_id"
+          ],
           "tableTo": "nodes",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
-        "edges_target_id_nodes_id_fk": {
-          "name": "edges_target_id_nodes_id_fk",
+        "edges_to_id_nodes_id_fk": {
+          "name": "edges_to_id_nodes_id_fk",
           "tableFrom": "edges",
-          "columnsFrom": ["target_id"],
+          "columnsFrom": [
+            "to_id"
+          ],
           "tableTo": "nodes",
-          "columnsTo": ["id"],
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "flashcard_nodes": {
+      "name": "flashcard_nodes",
+      "columns": {
+        "node_id": {
+          "name": "node_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "front": {
+          "name": "front",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "back": {
+          "name": "back",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "flashcard_nodes_node_id_nodes_id_fk": {
+          "name": "flashcard_nodes_node_id_nodes_id_fk",
+          "tableFrom": "flashcard_nodes",
+          "columnsFrom": [
+            "node_id"
+          ],
+          "tableTo": "nodes",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "link_nodes": {
+      "name": "link_nodes",
+      "columns": {
+        "node_id": {
+          "name": "node_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "crawled_title": {
+          "name": "crawled_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "crawled_text": {
+          "name": "crawled_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "crawled_html": {
+          "name": "crawled_html",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "link_nodes_url_unique": {
+          "name": "link_nodes_url_unique",
+          "columns": [
+            "url"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "link_nodes_node_id_nodes_id_fk": {
+          "name": "link_nodes_node_id_nodes_id_fk",
+          "tableFrom": "link_nodes",
+          "columnsFrom": [
+            "node_id"
+          ],
+          "tableTo": "nodes",
+          "columnsTo": [
+            "id"
+          ],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -108,6 +243,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
         "is_public": {
           "name": "is_public",
           "type": "integer",
@@ -129,28 +272,116 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        }
+      },
+      "indexes": {
+        "nodes_type_idx": {
+          "name": "nodes_type_idx",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
         },
-        "data": {
-          "name": "data",
+        "nodes_is_public_idx": {
+          "name": "nodes_is_public_idx",
+          "columns": [
+            "is_public"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "note_nodes": {
+      "name": "note_nodes",
+      "columns": {
+        "node_id": {
+          "name": "node_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content": {
+          "name": "content",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         }
       },
-      "indexes": {
-        "nodes_type_idx": {
-          "name": "nodes_type_idx",
-          "columns": ["type"],
-          "isUnique": false
-        },
-        "nodes_is_public_idx": {
-          "name": "nodes_is_public_idx",
-          "columns": ["is_public"],
-          "isUnique": false
+      "indexes": {},
+      "foreignKeys": {
+        "note_nodes_node_id_nodes_id_fk": {
+          "name": "note_nodes_node_id_nodes_id_fk",
+          "tableFrom": "note_nodes",
+          "columnsFrom": [
+            "node_id"
+          ],
+          "tableTo": "nodes",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "tag_nodes": {
+      "name": "tag_nodes",
+      "columns": {
+        "node_id": {
+          "name": "node_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "tag_nodes_name_unique": {
+          "name": "tag_nodes_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "tag_nodes_node_id_nodes_id_fk": {
+          "name": "tag_nodes_node_id_nodes_id_fk",
+          "tableFrom": "tag_nodes",
+          "columnsFrom": [
+            "node_id"
+          ],
+          "tableTo": "nodes",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

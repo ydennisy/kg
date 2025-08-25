@@ -24,8 +24,8 @@ importers:
         specifier: 14.0.0
         version: 14.0.0
       drizzle-orm:
-        specifier: 0.44.4
-        version: 0.44.4(@libsql/client@0.15.12)
+        specifier: 0.44.5
+        version: 0.44.5(@libsql/client@0.15.12)
       ink:
         specifier: 6.2.2
         version: 6.2.2(@types/react@19.1.10)(react@19.1.1)
@@ -35,6 +35,9 @@ importers:
       ink-text-input:
         specifier: 6.0.0
         version: 6.0.0(ink@6.2.2(@types/react@19.1.10)(react@19.1.1))(react@19.1.1)
+      ink-use-stdout-dimensions:
+        specifier: ^1.0.5
+        version: 1.0.5(ink@6.2.2(@types/react@19.1.10)(react@19.1.1))(react@19.1.1)
       inquirer-autocomplete-standalone:
         specifier: 0.8.1
         version: 0.8.1
@@ -971,8 +974,8 @@ packages:
     resolution: {integrity: sha512-tCPWVZWZqWVx2XUsVpJRnH9Mx0ClVOf5YUHerZ5so1OKSlqww4zy1R5ksEdGRcO3tM3zj0PYN6V48TbQCL1RfA==}
     hasBin: true
 
-  drizzle-orm@0.44.4:
-    resolution: {integrity: sha512-ZyzKFpTC/Ut3fIqc2c0dPZ6nhchQXriTsqTNs4ayRgl6sZcFlMs9QZKPSHXK4bdOf41GHGWf+FrpcDDYwW+W6Q==}
+  drizzle-orm@0.44.5:
+    resolution: {integrity: sha512-jBe37K7d8ZSKptdKfakQFdeljtu3P2Cbo7tJoJSVZADzIKOBo9IAJPOmMsH2bZl90bZgh8FQlD8BjxXA/zuBkQ==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -1221,6 +1224,12 @@ packages:
     peerDependencies:
       ink: '>=5'
       react: '>=18'
+
+  ink-use-stdout-dimensions@1.0.5:
+    resolution: {integrity: sha512-rVsqnw4tQEAJUoknU09+zHdDf30GJdkumkHr0iz/TOYMYEZJkYqziQSGJAM+Z+M603EDfO89+Nxyn/Ko2Zknfw==}
+    peerDependencies:
+      ink: '>=2.0.0'
+      react: '>=16.0.0'
 
   ink@6.2.2:
     resolution: {integrity: sha512-LN1f+/D8KKqMqRux08fIfA9wsEAJ9Bu9CiI3L6ih7bnqNSDUXT/JVJ0rUIc4NkjPiPaeI3BVNREcLYLz9ePSEg==}
@@ -2440,7 +2449,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.4(@libsql/client@0.15.12):
+  drizzle-orm@0.44.5(@libsql/client@0.15.12):
     optionalDependencies:
       '@libsql/client': 0.15.12
 
@@ -2632,6 +2641,11 @@ snapshots:
       ink: 6.2.2(@types/react@19.1.10)(react@19.1.1)
       react: 19.1.1
       type-fest: 4.41.0
+
+  ink-use-stdout-dimensions@1.0.5(ink@6.2.2(@types/react@19.1.10)(react@19.1.1))(react@19.1.1):
+    dependencies:
+      ink: 6.2.2(@types/react@19.1.10)(react@19.1.1)
+      react: 19.1.1
 
   ink@6.2.2(@types/react@19.1.10)(react@19.1.1):
     dependencies:

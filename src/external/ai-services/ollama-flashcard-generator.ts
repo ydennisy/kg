@@ -30,22 +30,6 @@ const tools = [
 
 class OllamaFlashcardGenerator implements FlashcardGenerator {
   public async generate(text: string): Promise<Array<Flashcard>> {
-    return [
-      {
-        back: 'Agents struggle with non-ASCII strings in CLI tools, e.g., feeding newlines or control characters via shell arguments.',
-        front: 'Why do non-ASCII string inputs cause issues with CLI tools?',
-      },
-      {
-        back: 'Claude Code performs a security preflight using the Haiku model before executing shell tools, which can block or slow down dangerous tool invocations.',
-        front: 'What is the security preflight step in Claude Code?',
-      },
-      {
-        back: 'Stateful session management is hard with CLI tools because agents must remember session names, e.g., tmux sessions can be renamed or forgotten, causing failures.',
-        front:
-          'Why is managing sessions difficult when using tmux with agents?',
-      },
-    ];
-
     const messages = [
       {
         role: 'system',
@@ -68,25 +52,23 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
       });
 
       // Check if the model is done
-      const isDone =
+      const isDoneMessage =
         response?.message?.content?.trim().toUpperCase() === 'DONE';
 
-      if (
-        (!response.message?.tool_calls ||
-          response.message.tool_calls.length === 0) &&
-        isDone
-      ) {
+      const areToolCallsExhausted =
+        !response.message?.tool_calls ||
+        response.message.tool_calls.length === 0;
+
+      if (areToolCallsExhausted && isDoneMessage) {
         break;
       }
 
-      // Execute any tool calls it requested
+      // Execute tool calls
       if (response.message?.tool_calls?.length) {
         messages.push(response.message);
         for (const call of response.message.tool_calls) {
           if (call.function?.name === 'create_flashcard') {
             const card = call.function.arguments as Flashcard;
-            console.log(card);
-
             flashcards.push(card);
 
             // Provide a tool "result" message so the model knows it succeeded

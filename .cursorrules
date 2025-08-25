@@ -1,0 +1,314 @@
+# Knowledge Graph (KG) Project - Cursor Rules
+
+## Project Overview
+
+You are working on a TypeScript-based knowledge graph (KG) CLI application for
+personal knowledge management. This application follows Clean Architecture
+principles with strict dependency inversion - the core domain never depends on
+external frameworks.
+
+## Core Node Types
+
+The system has exactly 4 node types (DO NOT extend or add new types):
+
+- **note**: Content-based knowledge with title and content
+- **link**: URL references with automatic title fallback
+- **tag**: Named categories for organizing nodes
+- **flashcard**: Study cards with front/back content for spaced repetition
+
+## Architecture Rules (CRITICAL)
+
+### Clean Architecture Layers
+
+1. **Domain** (`src/domain/`): Core business entities and factories
+   - Pure business logic, no external dependencies
+   - Contains: node types, base classes, factories, types
+2. **Application** (`src/application/`): Use cases and business rules
+   - Orchestrates domain logic
+   - Contains: use-cases, port interfaces
+3. **Adapters** (`src/adapters/`): Data transformation layer
+   - Converts between domain and external representations
+   - Contains: mappers (node-mapper, edge-mapper)
+4. **External** (`src/external/`): Framework and infrastructure
+   - All external dependencies live here
+   - Contains: CLI, database, repositories, validators, publishers, AI services
+
+### Dependency Rules
+
+- **NEVER** import from external layers in domain or application layers
+- **NEVER** import CLI/database/web frameworks in domain or application
+- Dependencies flow inward: External → Adapters → Application → Domain
+- Use interfaces (ports) for dependency inversion
+
+## Code Style Guidelines
+
+### TypeScript Standards
+
+- **NO** type casting unless absolutely necessary
+- **NO** `any` types - use `unknown` and proper type guards instead
+- **NO** implicit any - all parameters and return types must be typed
+- Use `type` for unions/intersections, `interface` for object shapes
+- Prefer `readonly` for immutable properties
+- Use `const` assertions where appropriate
+
+### Export Convention
+
+- Define all named exports at the bottom of the file:
+
+```typescript
+// Good
+class MyClass { ... }
+function myFunction() { ... }
+export { MyClass, myFunction };
+
+// Bad
+export class MyClass { ... }
+export function myFunction() { ... }
+```
+
+- Only export types/interfaces/classes that are used in other files
+
+### Import Convention
+
+- Always use `.js` extension for local imports (required for ESM):
+
+```typescript
+import { NodeMapper } from './adapters/node-mapper.js';
+```
+
+- Group imports: external deps, then local by layer (domain → application →
+  adapters → external)
+
+## Development Commands
+
+### Essential Commands
+
+```bash
+# Build TypeScript
+pnpm build
+
+# Type checking
+pnpm typecheck
+
+# Run CLI in development (with tsx)
+pnpm kg
+
+# Run tests
+pnpm test
+
+# Format code
+pnpm format
+
+# Database reset (removes local.db and recreates)
+pnpm db:reset
+
+# Generate migrations after schema changes
+pnpm db:generate
+
+# Apply migrations
+pnpm db:migrate
+```
+
+### Testing Specific Files
+
+```bash
+# Run specific test file
+pnpm test src/domain/node-factory.test.ts
+
+# Run tests matching pattern
+pnpm test --grep "creates a note"
+```
+
+## Database Schema
+
+### Core Tables
+
+- **nodes**: All node types with JSON data field and FTS support
+  - id (TEXT PRIMARY KEY)
+  - type (enum: 'note', 'link', 'tag', 'flashcard')
+  - version (INTEGER)
+  - data (JSON)
+  - is_public (BOOLEAN)
+  - created_at, updated_at (DATETIME)
+- **edges**: Relationships between nodes
+  - from_id, to_id (TEXT REFERENCES nodes)
+  - type (enum: 'references', 'contains', 'tagged_with', 'similar_to',
+    'responds_to')
+- **nodes_fts**: Full-text search virtual table (SQLite FTS5)
+  - Automatically synced via triggers
+
+## Testing Guidelines
+
+### Test Organization
+
+- Unit tests live alongside source files (`*.test.ts`)
+- Use Vitest as test runner
+- Mock repositories for use case testing
+- Test file naming: `<filename>.test.ts`
+
+### Test Patterns
+
+```typescript
+// Mock repository example
+const mockRepository: NodeRepository = {
+  save: vi.fn().mockResolvedValue(undefined),
+  findById: vi.fn(),
+  search: vi.fn(),
+  // ... other methods
+};
+
+// Use case testing
+describe('CreateNodeUseCase', () => {
+  it('should create a note node', async () => {
+    const useCase = new CreateNodeUseCase(
+      mockRepository,
+      mockCrawler,
+      mockSearchIndex
+    );
+    const result = await useCase.execute({
+      type: 'note',
+      title: 'Test Note',
+      isPublic: false,
+      data: { content: 'Test content' },
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+```
+
+## Git & Version Control
+
+### Branch Naming
+
+Use prefixes for branch names:
+
+- `feat/` - New features
+- `fix/` - Bug fixes
+- `refactor/` - Code refactoring
+- `chore/` - Maintenance tasks
+
+### Commit Messages
+
+- Use conventional commits when possible
+- Be descriptive but concise
+- Reference issues when applicable
+
+## Key Implementation Patterns
+
+### Use Case Pattern
+
+```typescript
+class SomeUseCase {
+  constructor(
+    private readonly repository: NodeRepository,
+    private readonly otherService: SomePort
+  ) {}
+
+  async execute(input: SomeInput): Promise<Result<Output, Error>> {
+    try {
+      // Business logic here
+      return { ok: true, result: output };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  }
+}
+```
+
+### Domain Entity Pattern
+
+```typescript
+class SomeNode extends BaseNode {
+  readonly type = 'some' as const;
+
+  private constructor(props: SomeNodeProps) {
+    super(props.base);
+    // Initialize specific properties
+  }
+
+  static create(input: CreateInput): SomeNode {
+    // Factory method with validation
+    return new SomeNode({ ... });
+  }
+
+  get title(): string {
+    // Required abstract method from BaseNode
+  }
+
+  get searchableContent(): string {
+    // Required abstract method from BaseNode
+  }
+}
+```
+
+### Repository Port Pattern
+
+```typescript
+interface NodeRepository {
+  save(node: AnyNode): Promise<void>;
+  findById(id: string): Promise<AnyNode | undefined>;
+  search(query: string): Promise<AnyNode[]>;
+  findByType<T extends NodeType>(type: T): Promise<NodeOfType<T>[]>;
+}
+```
+
+## Environment Variables
+
+- `DATABASE_URL`: SQLite database connection (default: `file:local.db`)
+- Use `dotenvx` for environment management in scripts
+
+## Common Pitfalls to Avoid
+
+1. **Don't add new node types** - The system is designed for 4 types only
+2. **Don't bypass Clean Architecture** - Never import external deps in domain
+3. **Don't use `any` type** - Always properly type your code
+4. **Don't forget `.js` extension** - Required for ESM imports
+5. **Don't export inline** - Always export at bottom of file
+6. **Don't mix concerns** - Keep layers separate and focused
+7. **Don't forget to index nodes** - Always update search index after saving
+8. **Don't use synchronous file operations** - Always use async/await
+
+## Project Philosophy
+
+- Keep it simple and flexible
+- Minimize external dependencies
+- Follow Clean Architecture strictly
+- Prioritize type safety
+- Write testable code
+- Maintain clear separation of concerns
+
+## When Making Changes
+
+### Before You Start
+
+1. Understand which layer your change affects
+2. Check if similar patterns exist in the codebase
+3. Ensure you're not violating Clean Architecture
+
+### While Coding
+
+1. Follow existing patterns and conventions
+2. Keep functions small and focused
+3. Write tests for new functionality
+4. Use meaningful variable and function names
+5. Add JSDoc comments for public APIs
+
+### Before Committing
+
+1. Run `pnpm typecheck` to ensure no type errors
+2. Run `pnpm test` to ensure tests pass
+3. Run `pnpm format` to format code
+4. Review your changes for architectural violations
+5. Ensure all exports are at the bottom of files
+
+## AI Assistant Behavior
+
+When working on this codebase:
+
+1. Always respect the Clean Architecture boundaries
+2. Suggest refactoring if you see architecture violations
+3. Write comprehensive tests for new features
+4. Use existing patterns rather than introducing new ones
+5. Ask for clarification if architectural decisions are unclear
+6. Prioritize maintainability over cleverness
+7. Keep the domain layer pure and framework-agnostic

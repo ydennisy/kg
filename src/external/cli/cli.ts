@@ -2,14 +2,37 @@ import { Command } from 'commander';
 import { select, input, confirm, editor } from '@inquirer/prompts';
 import autocomplete from 'inquirer-autocomplete-standalone';
 import packageJSON from '../../../package.json' with { type: 'json' };
-import type { NodeType } from '../../domain/node.js';
+import type { NodeType } from '../../domain/types.js';
 import type { CreateNodeUseCase } from '../../application/use-cases/create-node.js';
 import type { LinkNodesUseCase } from '../../application/use-cases/link-nodes.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { SearchNodesUseCase } from '../../application/use-cases/search-nodes.js';
 import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
+import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-due-flashcards.js';
+import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
 import type { Flashcard } from '../../application/ports/flashcard-generator.js';
+
+// TODO: we should not need to duplicate this type
+type NodeInputData =
+  | {
+      type: 'flashcard';
+      data: { front: string; back: string };
+    }
+  | {
+      type: 'link';
+      title: string | undefined;
+      data: { url: string };
+    }
+  | {
+      type: 'note';
+      title: string;
+      data: { content: string };
+    }
+  | {
+      type: 'tag';
+      data: { name: string; description?: string };
+    };
 
 export class CLI {
   private program: Command;
@@ -20,7 +43,9 @@ export class CLI {
     private searchNodesUseCase: SearchNodesUseCase,
     private getNodeUseCase: GetNodeUseCase,
     private generateFlashcardsUseCase: GenerateFlashcardsUseCase,
-    private publishSiteUseCase: PublishSiteUseCase
+    private publishSiteUseCase: PublishSiteUseCase,
+    private getDueFlashcardsUseCase: GetDueFlashcardsUseCase,
+    private reviewFlashcardUseCase: ReviewFlashcardUseCase
   ) {
     this.program = new Command();
     this.setupCommands();
@@ -63,6 +88,13 @@ export class CLI {
       .action(async () => {
         await this.publishSite();
       });
+
+    this.program
+      .command('review')
+      .description('Review due flashcards')
+      .action(async () => {
+        await this.reviewDueFlashcards();
+      });
   }
 
   private async createNode(): Promise<void> {
@@ -79,7 +111,7 @@ export class CLI {
       });
 
       // Step 2: Collect data based on node type
-      const { title, data } = await this.collectNodeInput(nodeType);
+      const input = await this.collectNodeInput(nodeType);
 
       // Step 3: Ask if node should be public
       const isPublic = await confirm({
@@ -89,13 +121,11 @@ export class CLI {
 
       // Step 4: Create the node
       const result = await this.createNodeUseCase.execute({
-        type: nodeType,
-        title,
-        data,
+        ...input,
         isPublic,
       });
 
-      if (result.ok) {
+      if (result && result.ok) {
         console.log(`✅ Created ${nodeType} node with ID: ${result.result.id}`);
 
         // Step 5: Ask if user wants to link to existing nodes
@@ -126,7 +156,10 @@ export class CLI {
         if (!query) {
           return [];
         }
-        const result = await this.searchNodesUseCase.execute({ query });
+        const result = await this.searchNodesUseCase.execute({
+          query,
+          withRelations: true,
+        });
         if (!result.ok) {
           console.error(`❌ Error searching nodes: ${result.error}`);
           process.exit(1);
@@ -135,10 +168,22 @@ export class CLI {
           const highlightedSnippet = snippet
             .replace(/<b>/g, '\x1b[1m')
             .replace(/<\/b>/g, '\x1b[0m');
+          const relatedPreview = node.relatedNodes
+            .slice(0, 3)
+            .map(
+              ({ node: r, relationship }) =>
+                `→ ${r.title} (${relationship.type})`
+            )
+            .join(', ');
+          const description = relatedPreview
+            ? `${highlightedSnippet}\n${relatedPreview}`
+            : `${highlightedSnippet}`;
           return {
             value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
-            description: `${highlightedSnippet}`,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(
+              2
+            )})`,
+            description,
           };
         });
       },
@@ -179,7 +224,9 @@ export class CLI {
             .replace(/<\/b>/g, '\x1b[0m');
           return {
             value: node.id,
-            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(2)})`,
+            name: `[${node.type.toUpperCase()}] ${node.title} (${score.toFixed(
+              2
+            )})`,
             description: `${highlightedSnippet}`,
           };
         });
@@ -244,8 +291,10 @@ export class CLI {
 
     for (const id of createdIds) {
       const linkRes = await this.linkNodesUseCase.execute({
-        sourceId: nodeId,
-        targetId: id,
+        fromId: nodeId,
+        toId: id,
+        type: 'related_to', // TODO: ask the user
+        isBidirectional: true, // TODO: ask the user
       });
       if (!linkRes.ok) {
         console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
@@ -279,10 +328,11 @@ export class CLI {
       console.log(`   ${card.front}`);
       console.log('\n💡 BACK:');
       console.log(`   ${card.back}`);
+      console.log('');
 
       // Ask what to do with this card
       const action = await select({
-        message: '\nWhat would you like to do with this card?',
+        message: 'What would you like to do with this card?',
         choices: [
           { name: '✅ Keep this card', value: 'keep' },
           { name: '❌ Discard this card', value: 'discard' },
@@ -397,9 +447,7 @@ export class CLI {
     return selectedFlashcards;
   }
 
-  private async collectNodeInput(
-    nodeType: NodeType
-  ): Promise<{ title: string | undefined; data: Record<string, unknown> }> {
+  private async collectNodeInput(nodeType: NodeType): Promise<NodeInputData> {
     switch (nodeType) {
       case 'note': {
         const title = await input({
@@ -413,7 +461,7 @@ export class CLI {
             waitForUseInput: false,
           }),
         };
-        return { title, data };
+        return { type: 'note', title, data };
       }
 
       case 'link': {
@@ -428,7 +476,11 @@ export class CLI {
           message: 'Enter a title, or leave blank to use URL title:',
           default: '',
         });
-        return { title, data };
+        return {
+          type: 'link',
+          title: title.trim() === '' ? undefined : title,
+          data,
+        };
       }
 
       case 'tag': {
@@ -438,8 +490,14 @@ export class CLI {
             validate: (value: string) =>
               value.trim().length > 0 || 'Name is required',
           }),
+          description: await editor({
+            message: 'Enter tag description (optional, opens editor):',
+            default: '',
+            waitForUseInput: false,
+          }),
         };
-        return { title: undefined, data };
+
+        return { type: 'tag', data };
       }
 
       case 'flashcard': {
@@ -455,7 +513,7 @@ export class CLI {
               value.trim().length > 0 || 'Back text is required',
           }),
         };
-        return { title: undefined, data };
+        return { type: 'flashcard', data };
       }
 
       default:
@@ -532,14 +590,16 @@ export class CLI {
               ];
             }
 
-            return filteredResults.map(({ node, score }) => {
-              // Get a preview of the data
-              const dataPreview = this.formatNodePreview(node);
+            return filteredResults.map(({ node, score, snippet }) => {
+              // Use snippet for preview instead of fetching full node data
+              const snippetPreview =
+                snippet
+                  .replace(/<b>/g, '')
+                  .replace(/<\/b>/g, '')
+                  .substring(0, 50) + (snippet.length > 50 ? '...' : '');
 
               return {
-                name: `[${node.type.toUpperCase()}] ${
-                  node.title
-                } - ${dataPreview} (Score: ${score.toFixed(2)})`,
+                name: `[${node.type.toUpperCase()}] ${node.title} - ${snippetPreview} (Score: ${score.toFixed(2)})`,
                 value: node.id,
               };
             });
@@ -558,8 +618,10 @@ export class CLI {
       if (selectedNodes.length > 0) {
         for (const targetNodeId of selectedNodes) {
           const linkResult = await this.linkNodesUseCase.execute({
-            sourceId: newNodeId,
-            targetId: targetNodeId,
+            fromId: newNodeId,
+            toId: targetNodeId,
+            type: 'related_to',
+            isBidirectional: true,
           });
 
           if (!linkResult.ok) {
@@ -577,27 +639,42 @@ export class CLI {
     }
   }
 
-  private formatNodePreview(node: any): string {
-    const data = node.data;
-
-    if (typeof data === 'string') {
-      return data.slice(0, 50) + (data.length > 50 ? '...' : '');
+  private async reviewDueFlashcards(): Promise<void> {
+    console.log('\n🔁 Reviewing due flashcards...\n');
+    const result = await this.getDueFlashcardsUseCase.execute({ limit: 20 });
+    if (!result.ok) {
+      console.error(`❌ Error fetching flashcards: ${result.error}`);
+      return;
+    }
+    const cards = result.result;
+    if (cards.length === 0) {
+      console.log('No flashcards are due for review.');
+      return;
     }
 
-    if (typeof data === 'object' && data !== null) {
-      // Try common preview fields
-      const previewField = data.content || data.url || data.name || data.front;
-      if (previewField && typeof previewField === 'string') {
-        return (
-          previewField.slice(0, 50) + (previewField.length > 50 ? '...' : '')
-        );
+    for (const [i, card] of cards.entries()) {
+      console.log(`\n📚 Card ${i + 1} of ${cards.length}`);
+      console.log(`Front: ${card.data.front}`);
+      await input({ message: 'Press enter to reveal the back' });
+      console.log(`Back: ${card.data.back}`);
+      const quality = await select({
+        message: 'How well did you recall this card?',
+        choices: [
+          { name: 'Again', value: 0 },
+          { name: 'Hard', value: 3 },
+          { name: 'Good', value: 4 },
+          { name: 'Easy', value: 5 },
+        ],
+      });
+      const review = await this.reviewFlashcardUseCase.execute({
+        flashcard: card,
+        quality,
+      });
+      if (!review.ok) {
+        console.error(`  ❌ Failed to review card: ${review.error}`);
       }
-
-      // Fallback to JSON representation
-      const jsonStr = JSON.stringify(data);
-      return jsonStr.slice(0, 50) + (jsonStr.length > 50 ? '...' : '');
     }
 
-    return 'No preview available';
+    console.log('\n✅ Review session complete');
   }
 }

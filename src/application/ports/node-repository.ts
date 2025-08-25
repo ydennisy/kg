@@ -1,17 +1,25 @@
-import type { Node, EdgeType } from '../../domain/node.js';
+import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
+import type { FlashcardNode } from '../../domain/flashcard-node.js';
 
 type SearchResult = {
-  node: Node;
+  node: AnyNode;
   snippet: string;
   score: number;
 };
 
 interface NodeRepository {
-  save(node: Node): Promise<void>;
-  link(sourceId: string, targetId: string, type?: EdgeType): Promise<void>;
-  findAll(): Promise<Node[]>;
-  findById(id: string): Promise<Node | null>;
-  search(query: string): Promise<SearchResult[]>;
+  save(node: AnyNode): Promise<void>;
+  update(node: AnyNode): Promise<void>;
+  link(
+    sourceId: string,
+    targetId: string,
+    type: EdgeType,
+    isBidirectional: boolean
+  ): Promise<void>;
+  findAll(): Promise<AnyNode[]>;
+  findById(id: string, withRelations?: boolean): Promise<AnyNode | null>;
+  search(query: string, withRelations?: boolean): Promise<SearchResult[]>;
+  findDueFlashcards(date: Date, limit: number): Promise<FlashcardNode[]>;
 }
 
 export type { NodeRepository, SearchResult };
