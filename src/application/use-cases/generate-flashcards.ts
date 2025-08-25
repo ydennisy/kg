@@ -25,10 +25,23 @@ class GenerateFlashcardsUseCase {
         return { ok: false, error: 'Node not found' };
       }
 
-      // TODO: handle different node types
-      const flashcards = await this.flashcardGenerator.generate(
-        (node as any).data?.text || ''
-      );
+      let text: string;
+      let flashcards: Array<Flashcard>;
+
+      // TODO: we have to check that the link has been crawled successfully
+      if (node.type === 'link') {
+        text = `${node.title} | ${node.data.crawled.text}`;
+        flashcards = await this.flashcardGenerator.generate(text);
+      } else if (node.type === 'note') {
+        text = `${node.title} | ${node.data.content}`;
+        flashcards = await this.flashcardGenerator.generate(text);
+      } else {
+        return {
+          ok: false,
+          error:
+            'Flashcards can be generated only from `note` or `link` node types',
+        };
+      }
 
       return { ok: true, result: flashcards };
     } catch (err) {
