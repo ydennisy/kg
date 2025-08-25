@@ -1,6 +1,6 @@
 {
   "name": "kg",
-  "version": "0.0.2",
+  "version": "0.0.0-dev.2",
   "type": "module",
   "scripts": {
     "kg": "tsx src/main.ts",
@@ -24,7 +24,7 @@
     "@mozilla/readability": "0.6.0",
     "ajv": "8.17.1",
     "commander": "14.0.0",
-    "drizzle-orm": "0.44.4",
+    "drizzle-orm": "0.44.5",
     "inquirer-autocomplete-standalone": "0.8.1",
     "jsdom": "26.1.0",
     "marked": "^16.2.0",

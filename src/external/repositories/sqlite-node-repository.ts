@@ -172,7 +172,12 @@ class SqliteNodeRepository implements NodeRepository {
 
     const relatedNodes = await this.db.query.nodesTable.findMany({
       where: inArray(nodesTable.id, relatedNodeIds),
-      with: { noteNode: true, linkNode: true /* etc */ },
+      with: {
+        noteNode: true,
+        linkNode: true,
+        tagNode: true,
+        flashcardNode: true,
+      },
     });
 
     // Map to domain objects and attach to node
@@ -270,7 +275,10 @@ class SqliteNodeRepository implements NodeRepository {
     if (withRelations) {
       for (const node of nodeMap.values()) {
         const edges = await this.db.query.edgesTable.findMany({
-          where: or(eq(edgesTable.fromId, node.id), eq(edgesTable.toId, node.id)),
+          where: or(
+            eq(edgesTable.fromId, node.id),
+            eq(edgesTable.toId, node.id)
+          ),
         });
 
         if (edges.length === 0) continue;
