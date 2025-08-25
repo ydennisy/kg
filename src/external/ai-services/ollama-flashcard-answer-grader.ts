@@ -54,31 +54,88 @@ class OllamaFlashcardAnswerGrader implements FlashcardAnswerGrader {
       think: 'medium',
       tools: tools,
     });
-    const content = response.message?.content ?? '{}';
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      return { score: 0, comment: 'Failed to parse model response' };
-    }
+
+    // Check for tool calls in the response
     if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'score' in parsed &&
-      'comment' in parsed
+      !response.message?.tool_calls ||
+      response.message.tool_calls.length === 0
     ) {
-      const obj = parsed as { score: unknown; comment: unknown };
-      if (
-        (obj.score === 0 || obj.score === 0.5 || obj.score === 1) &&
-        typeof obj.comment === 'string'
-      ) {
+      console.warn('No tool calls received from model. Response:', {
+        content: response.message?.content,
+        role: response.message?.role,
+      });
+      return {
+        score: 0,
+        comment:
+          'Model did not call the grade_response tool. Response: ' +
+          (response.message?.content || 'No content'),
+      };
+    }
+
+    // Process the tool calls
+    for (const call of response.message.tool_calls) {
+      if (call.function?.name === 'grade_response') {
+        const args = call.function.arguments;
+
+        // Validate the arguments structure
+        if (!args || typeof args !== 'object') {
+          console.error('Invalid tool call arguments:', { args, call });
+          return {
+            score: 0,
+            comment: 'Tool call arguments are missing or invalid',
+          };
+        }
+
+        // Extract and validate grade and reason
+        const typedArgs = args as Record<string, unknown>;
+        const { grade, reason } = typedArgs;
+
+        // Validate grade field
+        if (grade !== 0 && grade !== 0.5 && grade !== 1) {
+          console.error('Invalid grade value:', {
+            grade,
+            expectedValues: [0, 0.5, 1],
+            fullArgs: args,
+          });
+          return {
+            score: 0,
+            comment: `Invalid grade value: ${grade}. Expected 0, 0.5, or 1`,
+          };
+        }
+
+        // Validate reason field
+        if (typeof reason !== 'string' || reason.trim() === '') {
+          console.error('Invalid reason value:', {
+            reason,
+            type: typeof reason,
+            fullArgs: args,
+          });
+          return {
+            score: 0,
+            comment: `Invalid reason: ${typeof reason === 'string' ? 'empty string' : 'not a string'}`,
+          };
+        }
+
+        // Successfully validated - return the result
         return {
-          score: obj.score,
-          comment: obj.comment,
+          score: grade as 0 | 0.5 | 1,
+          comment: reason.trim(),
         };
       }
     }
-    return { score: 0, comment: 'Invalid model response' };
+
+    // No grade_response tool call found
+    const toolNames = response.message.tool_calls
+      .map((call) => call.function?.name)
+      .filter(Boolean);
+    console.warn('Expected grade_response tool call but received:', {
+      toolNames,
+      toolCalls: response.message.tool_calls,
+    });
+    return {
+      score: 0,
+      comment: `Model called wrong tool(s): ${toolNames.join(', ')}. Expected: grade_response`,
+    };
   }
 }
 
