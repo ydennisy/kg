@@ -34,9 +34,15 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
       {
         role: 'system',
         content:
-          'You are an AI teacher. Read the document and create high-quality flashcards. ' +
-          'Only use the `create_flashcard` tool to output cards. Keep going, one card per tool call, ' +
-          'until there are no more good cards. When finished, reply with the single word DONE.',
+          'You are an expert in creating high-quality, atomic flashcards for spaced repetition systems. ' +
+          'Your task is to analyze the provided text and generate flashcards based on its content. ' +
+          'Follow these rules strictly:\n' +
+          '1.  **Atomicity**: Each flashcard must test only ONE concept, fact, or definition. (Minimum Information Principle).\n' +
+          '2.  **Self-Contained**: The question on the front must be fully understandable without the original text. Do NOT use phrases like "According to the article..." or pronouns that refer back to the source document.\n' +
+          '3.  **Clarity**: Formulate clear, unambiguous questions. The answer on the back should be concise and directly address the question.\n' +
+          '4.  **Direction**: For concepts, prefer "What is X?" or "Define X." For processes, prefer "What is the first step in Y?"\n\n' +
+          'Use the `create_flashcard` tool to output each card. Generate as many high-value cards as possible. ' +
+          'When you have extracted all possible flashcards, respond with the single word DONE.',
       },
       { role: 'user', content: `Create flashcards for:\n---\n${text}` },
     ];
@@ -52,14 +58,11 @@ class OllamaFlashcardGenerator implements FlashcardGenerator {
       });
 
       // Check if the model is done
+      const toolCalls = response.message?.tool_calls;
       const isDoneMessage =
         response?.message?.content?.trim().toUpperCase() === 'DONE';
 
-      const areToolCallsExhausted =
-        !response.message?.tool_calls ||
-        response.message.tool_calls.length === 0;
-
-      if (areToolCallsExhausted && isDoneMessage) {
+      if (!toolCalls && isDoneMessage) {
         break;
       }
 
