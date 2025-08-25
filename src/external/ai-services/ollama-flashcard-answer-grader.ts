@@ -41,6 +41,7 @@ class OllamaFlashcardAnswerGrader implements FlashcardAnswerGrader {
           'You grade flashcard answers. ' +
           'You will be provided the flashcard QUESTION, ANSWER and the answer given by the USER. ' +
           'You must grade if the user has provided a correct answer for the card. ' +
+          'When providing your reasoning, address the user directly (use "you" instead of "the user"). ' +
           'Call the grade_response tool with your grade and reasoning for the given grade.',
       },
       {
