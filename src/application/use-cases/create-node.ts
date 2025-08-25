@@ -5,7 +5,6 @@ import { TagNode } from '../../domain/tag-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { AnyNode } from '../../domain/types.js';
 import type { Crawler } from '../ports/crawler.js';
-import type { SearchIndex } from '../ports/search-index.js';
 
 type CreateNodeInput =
   | {
@@ -34,8 +33,7 @@ type CreateNodeInput =
 class CreateNodeUseCase {
   constructor(
     private readonly repository: NodeRepository,
-    private readonly crawler: Crawler,
-    private readonly searchIndex: SearchIndex
+    private readonly crawler: Crawler
   ) {}
 
   async execute(input: CreateNodeInput) {
@@ -79,7 +77,6 @@ class CreateNodeUseCase {
       }
 
       await this.repository.save(node);
-      await this.searchIndex.indexNode(node);
       return { ok: true as const, result: node };
     } catch (err) {
       return { ok: false as const, error: (err as Error).message };

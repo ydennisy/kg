@@ -131,9 +131,9 @@ const mappers = {
         isPublic: record.isPublic,
           data: {
             name: record.tagNode.name,
-            ...(record.tagNode.description !== null && {
-              description: record.tagNode.description,
-            }),
+            ...(record.tagNode.description !== null
+              ? { description: record.tagNode.description }
+              : {}),
           },
       }),
     toTypeRecord: (node: TagNode): Omit<TagNodeRecord, 'nodeId'> => ({

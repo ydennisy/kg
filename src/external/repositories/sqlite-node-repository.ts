@@ -42,6 +42,12 @@ class SqliteNodeRepository implements NodeRepository {
     await this.db.transaction(async (tx) => {
       await tx.insert(nodesTable).values(bundle.nodeRecord);
       await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
+      await tx.run(
+        sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
+      );
+      await tx.run(
+        sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
+      );
     });
   }
 
@@ -103,6 +109,17 @@ class SqliteNodeRepository implements NodeRepository {
             .where(eq(flashcardNodesTable.nodeId, node.id));
           break;
       }
+      await tx.run(sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`);
+      await tx.run(
+        sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
+      );
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(nodesTable).where(eq(nodesTable.id, id));
+      await tx.run(sql`DELETE FROM nodes_fts WHERE id = ${id}`);
     });
   }
 
