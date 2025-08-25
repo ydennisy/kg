@@ -92,6 +92,20 @@ on this section at all times.
 - Use branch names which are prefixed by the type of change, they should be one
   of: feat/, chore/, refactor/ or fix/.
 
+### Planning
+
+When asked to plan or discuss architecture, tests, new features:
+
+- Make sure to review and build up good context, by exploring the relevant parts
+  of the codebase.
+- Provide pseudocode and or snippets.
+- Be clear in your language, for example saying "it will be implemented
+  properly" adds no information, explain what you mean by "properly".
+- Evaluate and offer multiple options and give your view on which you feel is
+  best.
+- Remember keep things simple and avoid early abstraction.
+- Be as detailed as possible.
+
 ## Architecture
 
 ### Clean Architecture Layers
