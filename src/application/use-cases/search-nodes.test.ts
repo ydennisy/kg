@@ -1,6 +1,5 @@
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { migrate } from 'drizzle-orm/libsql/migrator';
@@ -10,25 +9,22 @@ import { LinkNode } from '../../domain/link-node.js';
 import { createDatabaseClient } from '../../external/database/client.js';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
-import type { NodeRepository, SearchResult } from '../ports/node-repository.js';
 import { SqliteSearchIndex } from '../../external/search-index/sqlite-search-index.js';
+import type { NodeRepository, SearchResult } from '../ports/node-repository.js';
 
 describe('SearchNodesUseCase', () => {
-  let mockRepository: NodeRepository;
+  let repository: NodeRepository;
   let useCase: SearchNodesUseCase;
 
-  beforeEach(() => {
-    mockRepository = {
-      save: vi.fn(),
-      update: vi.fn(),
-      findById: vi.fn(),
-      findAll: vi.fn(),
-      search: vi.fn(),
-      link: vi.fn(),
-      findDueFlashcards: vi.fn(),
-    };
+  beforeEach(async () => {
+    // TODO: move this code to some helper as it is used everywhere!
+    const dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
+    const db = createDatabaseClient(`file:${dbFile}`);
+    await migrate(db, { migrationsFolder: './drizzle' });
 
-    useCase = new SearchNodesUseCase(mockRepository);
+    const mapper = new NodeMapper();
+    repository = new SqliteNodeRepository(db, mapper);
+    useCase = new SearchNodesUseCase(repository);
   });
 
   test('returns empty results for empty query', async () => {
@@ -38,7 +34,21 @@ describe('SearchNodesUseCase', () => {
     if (result.ok) {
       expect(result.result).toEqual([]);
     }
-    expect(mockRepository.search).not.toHaveBeenCalled();
+    expect(repository.search).not.toHaveBeenCalled();
+  });
+
+  test('returns empty results for single character query', async () => {
+    // vi.mocked(mockRepository.search).mockRejectedValue(
+    //   new Error('search should not be called')
+    // );
+
+    const result = await useCase.execute({ query: 'm' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.result).toEqual([]);
+    }
+    expect(repository.search).not.toHaveBeenCalled();
   });
 
   test('returns search results without relations by default', async () => {
@@ -56,7 +66,7 @@ describe('SearchNodesUseCase', () => {
       },
     ];
 
-    vi.mocked(mockRepository.search).mockResolvedValue(mockResults);
+    // vi.mocked(repository.search).mockResolvedValue(mockResults);
 
     const result = await useCase.execute({ query: 'content' });
 
@@ -64,7 +74,7 @@ describe('SearchNodesUseCase', () => {
     if (result.ok) {
       expect(result.result).toEqual(mockResults);
     }
-    expect(mockRepository.search).toHaveBeenCalledWith('content', undefined);
+    expect(repository.search).toHaveBeenCalledWith('content', undefined);
   });
 
   test('returns search results with relations when requested', async () => {
@@ -99,7 +109,7 @@ describe('SearchNodesUseCase', () => {
       },
     ];
 
-    vi.mocked(mockRepository.search).mockResolvedValue(mockResults);
+    /// vi.mocked(repository.search).mockResolvedValue(mockResults);
 
     const result = await useCase.execute({
       query: 'parent',
@@ -112,13 +122,13 @@ describe('SearchNodesUseCase', () => {
       expect(result.result[0].node.relatedNodes).toHaveLength(1);
       expect(result.result[0].node.relatedNodes[0].node.id).toBe(childNote.id);
     }
-    expect(mockRepository.search).toHaveBeenCalledWith('parent', true);
+    expect(repository.search).toHaveBeenCalledWith('parent', true);
   });
 
   test('handles repository errors gracefully', async () => {
-    vi.mocked(mockRepository.search).mockRejectedValue(
-      new Error('Database connection failed')
-    );
+    // vi.mocked(repository.search).mockRejectedValue(
+    //   new Error('Database connection failed')
+    // );
 
     const result = await useCase.execute({ query: 'test' });
 
@@ -161,7 +171,7 @@ describe('SearchNodesUseCase', () => {
       },
     ];
 
-    vi.mocked(mockRepository.search).mockResolvedValue(mockResults);
+    // vi.mocked(repository.search).mockResolvedValue(mockResults);
 
     const result = await useCase.execute({ query: 'computer' });
 
@@ -206,7 +216,7 @@ describe('SearchNodesUseCase', () => {
       },
     ];
 
-    vi.mocked(mockRepository.search).mockResolvedValue(mockResults);
+    // vi.mocked(repository.search).mockResolvedValue(mockResults);
 
     const result = await useCase.execute({ query: 'quantum computing' });
 
