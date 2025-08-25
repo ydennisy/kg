@@ -7,7 +7,6 @@ import { migrate } from 'drizzle-orm/libsql/migrator';
 import { createDatabaseClient, type DatabaseClient } from '../../external/database/client.js';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
-import { SqliteSearchIndex } from '../../external/search-index/sqlite-search-index.js';
 import { SearchNodesUseCase } from './search-nodes.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';
@@ -29,7 +28,6 @@ describe('SearchNodesUseCase (integration)', () => {
   let db: DatabaseClient;
   let dbFile: string;
   let repository: SqliteNodeRepository;
-  let searchIndex: SqliteSearchIndex;
   let useCase: SearchNodesUseCase;
 
   beforeEach(async () => {
@@ -37,7 +35,6 @@ describe('SearchNodesUseCase (integration)', () => {
     db = createDatabaseClient(`file:${dbFile}`);
     await migrate(db, { migrationsFolder: './drizzle' });
     repository = new SqliteNodeRepository(db, new NodeMapper());
-    searchIndex = new SqliteSearchIndex(db);
     useCase = new SearchNodesUseCase(repository);
   });
 
@@ -54,7 +51,6 @@ describe('SearchNodesUseCase (integration)', () => {
       data: { content: 'Some important content' },
     });
     await repository.save(note);
-    await searchIndex.indexNode(note);
 
     const result = await useCase.execute({ query: 'important' });
     assertOk(result);
@@ -79,8 +75,6 @@ describe('SearchNodesUseCase (integration)', () => {
 
     await repository.save(note);
     await repository.save(link);
-    await searchIndex.indexNode(note);
-    await searchIndex.indexNode(link);
 
     const result = await useCase.execute({ query: 'computer' });
     assertOk(result);
@@ -103,8 +97,6 @@ describe('SearchNodesUseCase (integration)', () => {
     await repository.save(parent);
     await repository.save(child);
     await repository.link(parent.id, child.id, 'contains', false);
-    await searchIndex.indexNode(parent);
-    await searchIndex.indexNode(child);
 
     const result = await useCase.execute({ query: 'Parent', withRelations: true });
     assertOk(result);
@@ -120,7 +112,6 @@ describe('SearchNodesUseCase (integration)', () => {
       data: { content: 'Something else' },
     });
     await repository.save(note);
-    await searchIndex.indexNode(note);
 
     const result = await useCase.execute({ query: 'unrelated' });
     assertOk(result);

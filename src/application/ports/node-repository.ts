@@ -10,6 +10,7 @@ type SearchResult = {
 interface NodeRepository {
   save(node: AnyNode): Promise<void>;
   update(node: AnyNode): Promise<void>;
+  delete(id: string): Promise<void>;
   link(
     sourceId: string,
     targetId: string,
