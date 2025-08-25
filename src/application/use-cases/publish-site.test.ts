@@ -3,7 +3,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { describe, test, beforeEach, afterEach, expect } from 'vitest';
-import { migrate } from 'drizzle-orm/libsql/migrator';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';
@@ -12,30 +11,22 @@ import { FlashcardNode } from '../../domain/flashcard-node.js';
 import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
 import { HTMLGenerator } from '../../external/publishers/html-generator.js';
 import { PublishSiteUseCase } from './publish-site.js';
-import {
-  createDatabaseClient,
-  type DatabaseClient,
-} from '../../external/database/client.js';
+import { createTestDatabase, type TestDatabase } from '../../../test/database.js';
 
 describe('PublishSiteUseCase', () => {
-  let db: DatabaseClient;
+  let db: TestDatabase;
   let repository: SqliteNodeRepository;
   let outputDir: string;
-  let dbFile: string;
 
   beforeEach(async () => {
-    // Use a temp file vs in memory to allow for transactions to work
-    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
-    db = createDatabaseClient(`file:${dbFile}`);
-    await migrate(db, { migrationsFolder: './drizzle' });
-
+    db = await createTestDatabase();
     const mapper = new NodeMapper();
     repository = new SqliteNodeRepository(db, mapper);
-
     outputDir = await fs.mkdtemp(path.join(os.tmpdir(), 'publish-test-'));
   });
 
   afterEach(async () => {
+    await db.cleanup();
     await fs.rm(outputDir, { recursive: true, force: true });
   });
   test('publishes only public nodes and generates correct files', async () => {

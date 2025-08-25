@@ -1,17 +1,10 @@
-import os from 'node:os';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
-import { migrate } from 'drizzle-orm/libsql/migrator';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { SqliteNodeRepository } from './sqlite-node-repository.js';
-import {
-  createDatabaseClient,
-  type DatabaseClient,
-} from '../database/client.js';
+import { SqliteSearchIndex } from '../search-index/sqlite-search-index.js';
+import { createTestDatabase, type TestDatabase } from '../../../test/database.js';
 
 const nodes = [
   {
@@ -35,25 +28,18 @@ const nodes = [
 ];
 
 describe('SqliteNodeRepository', () => {
-  let db: DatabaseClient;
+  let db: TestDatabase;
   let repository: SqliteNodeRepository;
-  let dbFile: string;
+  let searchIndex: SqliteSearchIndex;
 
   beforeEach(async () => {
-    // Use a temp file vs in memory to allow for transactions to work
-    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
-    db = createDatabaseClient(`file:${dbFile}`);
-    await migrate(db, { migrationsFolder: './drizzle' });
-
+    db = await createTestDatabase();
     const mapper = new NodeMapper();
     repository = new SqliteNodeRepository(db, mapper);
   });
 
   afterEach(async () => {
-    // best-effort cleanup
-    try {
-      await fs.unlink(dbFile);
-    } catch {}
+    await db.cleanup();
   });
 
   test('node is saved', async () => {
