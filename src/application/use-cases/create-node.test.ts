@@ -3,11 +3,11 @@ import { CreateNodeUseCase } from './create-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Crawler } from '../ports/crawler.js';
 import type { AnyNode } from '../../domain/types.js';
-import type { SearchIndex } from '../ports/search-index.js';
 
 const mockRepository: NodeRepository = {
   save: async (node: AnyNode) => Promise.resolve(),
   update: async (node: AnyNode) => Promise.resolve(),
+  delete: async (id: string) => Promise.resolve(),
   findById: async (id: string) => Promise.resolve(null),
   findAll: async () => Promise.resolve([]),
   search: async (query: string, withRelations?: boolean) => Promise.resolve([]),
@@ -25,10 +25,6 @@ const mockCrawler: Crawler = {
   }),
 };
 
-const mockSearchIndex: SearchIndex = {
-  indexNode: vi.fn(async (node: AnyNode) => Promise.resolve()),
-  removeNode: vi.fn(async (id: string) => Promise.resolve()),
-};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,8 +34,7 @@ describe('CreateNodeUseCase', () => {
   test('creates a `note` node successfully', async () => {
     const useCase = new CreateNodeUseCase(
       mockRepository,
-      mockCrawler,
-      mockSearchIndex
+      mockCrawler
     );
     const result = await useCase.execute({
       type: 'note',
@@ -55,14 +50,12 @@ describe('CreateNodeUseCase', () => {
       expect(result.result.content).toBe('hello world');
       expect(result.result.isPublic).toBe(false);
     }
-    expect(mockSearchIndex.indexNode).toHaveBeenCalled();
   });
 
   test('creates a `link` node successfully', async () => {
     const useCase = new CreateNodeUseCase(
       mockRepository,
-      mockCrawler,
-      mockSearchIndex
+      mockCrawler
     );
     const result = await useCase.execute({
       type: 'link',
@@ -75,6 +68,5 @@ describe('CreateNodeUseCase', () => {
       expect(result.result.type).toBe('link');
       expect(result.result.data.url).toBe('https://example.com');
     }
-    expect(mockSearchIndex.indexNode).toHaveBeenCalled();
   });
 });

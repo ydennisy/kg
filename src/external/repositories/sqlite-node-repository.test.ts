@@ -36,7 +36,6 @@ describe('SqliteNodeRepository', () => {
     db = await createTestDatabase();
     const mapper = new NodeMapper();
     repository = new SqliteNodeRepository(db, mapper);
-    searchIndex = new SqliteSearchIndex(db);
   });
 
   afterEach(async () => {
@@ -109,11 +108,24 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
-      await searchIndex.indexNode(node);
     }
     const { rows } = await db.run(sql`SELECT * FROM nodes_fts`);
 
     expect(rows.length).toBe(3);
+  });
+
+  test('deleting a node removes it from the FTS virtual table', async () => {
+    const node = NoteNode.create({
+      title: 'Temp',
+      isPublic: false,
+      data: { content: 'temp' },
+    });
+    await repository.save(node);
+    await repository.delete(node.id);
+    const { rows } = await db.run(
+      sql`SELECT * FROM nodes_fts WHERE id = ${node.id}`
+    );
+    expect(rows.length).toBe(0);
   });
 
   test('full text search returns matches for relevant queries', async () => {
@@ -124,7 +136,6 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
-      await searchIndex.indexNode(node);
     }
 
     const results = await repository.search('computers');
@@ -145,8 +156,6 @@ describe('SqliteNodeRepository', () => {
 
     await repository.save(first);
     await repository.save(second);
-    await searchIndex.indexNode(first);
-    await searchIndex.indexNode(second);
 
     const results = await repository.search('dog');
     expect(results).toHaveLength(2);
@@ -163,7 +172,6 @@ describe('SqliteNodeRepository', () => {
         data: n.data,
       });
       await repository.save(node);
-      await searchIndex.indexNode(node);
     }
 
     const results = await repository.search('irrelevant');
@@ -184,8 +192,6 @@ describe('SqliteNodeRepository', () => {
 
     await repository.save(parent);
     await repository.save(child);
-    await searchIndex.indexNode(parent);
-    await searchIndex.indexNode(child);
     await repository.link(parent.id, child.id, 'contains', false);
 
     const results = await repository.search('Parent', true);

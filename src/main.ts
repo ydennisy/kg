@@ -4,6 +4,7 @@ import { HTMLGenerator } from './external/publishers/html-generator.js';
 import { NodeMapper } from './adapters/node-mapper.js';
 import { HTTPCrawler } from './external/crawlers/http-crawler.js';
 import { OllamaFlashcardGenerator } from './external/ai-services/ollama-flashcard-generator.js';
+import { OllamaFlashcardAnswerGrader } from './external/ai-services/ollama-flashcard-answer-grader.js';
 import { CLI } from './external/cli/cli.js';
 import { CreateNodeUseCase } from './application/use-cases/create-node.js';
 import { GetNodeUseCase } from './application/use-cases/get-node.js';
@@ -13,7 +14,7 @@ import { SearchNodesUseCase } from './application/use-cases/search-nodes.js';
 import { GenerateFlashcardsUseCase } from './application/use-cases/generate-flashcards.js';
 import { GetDueFlashcardsUseCase } from './application/use-cases/get-due-flashcards.js';
 import { ReviewFlashcardUseCase } from './application/use-cases/review-flashcard.js';
-import { SqliteSearchIndex } from './external/search-index/sqlite-search-index.js';
+import { EvaluateFlashcardAnswerUseCase } from './application/use-cases/evaluate-flashcard-answer.js';
 
 class Application {
   private cli: CLI;
@@ -26,16 +27,12 @@ class Application {
       process.env.DATABASE_URL || 'file:local.db'
     );
     const nodeRepository = new SqliteNodeRepository(db, nodeMapper);
-    const searchIndex = new SqliteSearchIndex(db);
     const htmlGenerator = new HTMLGenerator();
     const crawler = new HTTPCrawler();
     const flashcardGenerator = new OllamaFlashcardGenerator();
+    const flashcardAnswerGrader = new OllamaFlashcardAnswerGrader();
 
-    const createNode = new CreateNodeUseCase(
-      nodeRepository,
-      crawler,
-      searchIndex
-    );
+    const createNode = new CreateNodeUseCase(nodeRepository, crawler);
     const linkNodes = new LinkNodesUseCase(nodeRepository);
     const searchNodes = new SearchNodesUseCase(nodeRepository);
     const getNode = new GetNodeUseCase(nodeRepository);
@@ -50,6 +47,9 @@ class Application {
     );
     const getDueFlashcards = new GetDueFlashcardsUseCase(nodeRepository);
     const reviewFlashcard = new ReviewFlashcardUseCase(nodeRepository);
+    const evaluateFlashcardAnswer = new EvaluateFlashcardAnswerUseCase(
+      flashcardAnswerGrader
+    );
     this.cli = new CLI(
       createNode,
       linkNodes,
@@ -58,7 +58,8 @@ class Application {
       generateFlashcards,
       publishSite,
       getDueFlashcards,
-      reviewFlashcard
+      reviewFlashcard,
+      evaluateFlashcardAnswer
     );
   }
 
