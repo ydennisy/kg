@@ -109,7 +109,7 @@ export class CLI {
           { name: 'Flashcard', value: 'flashcard' as NodeType },
         ],
       });
-     
+
       // Step 2: Collect data based on node type
       const input = await this.collectNodeInput(nodeType);
 
@@ -328,10 +328,11 @@ export class CLI {
       console.log(`   ${card.front}`);
       console.log('\n💡 BACK:');
       console.log(`   ${card.back}`);
+      console.log('');
 
       // Ask what to do with this card
       const action = await select({
-        message: '\nWhat would you like to do with this card?',
+        message: 'What would you like to do with this card?',
         choices: [
           { name: '✅ Keep this card', value: 'keep' },
           { name: '❌ Discard this card', value: 'discard' },
@@ -445,7 +446,6 @@ export class CLI {
 
     return selectedFlashcards;
   }
-
 
   private async collectNodeInput(nodeType: NodeType): Promise<NodeInputData> {
     switch (nodeType) {
