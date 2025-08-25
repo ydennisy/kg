@@ -8,6 +8,7 @@ import type { GenerateFlashcardsUseCase } from '../../application/use-cases/gene
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-due-flashcards.js';
 import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
+import type { EvaluateFlashcardAnswerUseCase } from '../../application/use-cases/evaluate-flashcard-answer.js';
 import { CreateCommand } from './commands/create.js';
 import { SearchCommand } from './commands/search.js';
 import { GenerateFlashcardsCommand } from './commands/generate-flashcards.js';
@@ -25,7 +26,8 @@ class CLI {
     generateFlashcardsUseCase: GenerateFlashcardsUseCase,
     publishSiteUseCase: PublishSiteUseCase,
     getDueFlashcardsUseCase: GetDueFlashcardsUseCase,
-    reviewFlashcardUseCase: ReviewFlashcardUseCase
+    reviewFlashcardUseCase: ReviewFlashcardUseCase,
+    evaluateFlashcardAnswerUseCase: EvaluateFlashcardAnswerUseCase
   ) {
     this.program = new Command();
     this.program
@@ -52,7 +54,8 @@ class CLI {
 
     new ReviewCommand(
       getDueFlashcardsUseCase,
-      reviewFlashcardUseCase
+      reviewFlashcardUseCase,
+      evaluateFlashcardAnswerUseCase
     ).register(this.program);
   }
 
