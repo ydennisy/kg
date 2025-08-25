@@ -2,13 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { SearchNodesUseCase } from './search-nodes.js';
 import { NoteNode } from '../../domain/note-node.js';
 import type { NodeRepository, SearchResult } from '../ports/node-repository.js';
-
-function assertOk<T>(
-  result: { ok: true; result: T } | { ok: false; error: string }
-): asserts result is { ok: true; result: T } {
-  expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error(result.error);
-}
+import { assertOk } from '../../../test/assert.js';
 
 describe('SearchNodesUseCase', () => {
   let repository: NodeRepository;

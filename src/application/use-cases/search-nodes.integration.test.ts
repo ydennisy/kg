@@ -1,23 +1,12 @@
-import os from 'node:os';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import { describe, test, beforeEach, afterEach, expect } from 'vitest';
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { createDatabaseClient, type DatabaseClient } from '../../external/database/client.js';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
 import { SqliteSearchIndex } from '../../external/search-index/sqlite-search-index.js';
 import { SearchNodesUseCase } from './search-nodes.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { LinkNode } from '../../domain/link-node.js';
-
-function assertOk<T>(
-  result: { ok: true; result: T } | { ok: false; error: string }
-): asserts result is { ok: true; result: T } {
-  expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error(result.error);
-}
+import { createTestDatabase, type TestDatabase } from '../../../test/database.js';
+import { assertOk } from '../../../test/assert.js';
 
 function first<T>(arr: readonly T[]): T {
   const item = arr[0];
@@ -26,25 +15,20 @@ function first<T>(arr: readonly T[]): T {
 }
 
 describe('SearchNodesUseCase (integration)', () => {
-  let db: DatabaseClient;
-  let dbFile: string;
+  let db: TestDatabase;
   let repository: SqliteNodeRepository;
   let searchIndex: SqliteSearchIndex;
   let useCase: SearchNodesUseCase;
 
   beforeEach(async () => {
-    dbFile = path.join(os.tmpdir(), `${randomUUID()}.db`);
-    db = createDatabaseClient(`file:${dbFile}`);
-    await migrate(db, { migrationsFolder: './drizzle' });
+    db = await createTestDatabase();
     repository = new SqliteNodeRepository(db, new NodeMapper());
     searchIndex = new SqliteSearchIndex(db);
     useCase = new SearchNodesUseCase(repository);
   });
 
   afterEach(async () => {
-    try {
-      await fs.unlink(dbFile);
-    } catch {}
+    await db.cleanup();
   });
 
   test('returns matching nodes for query', async () => {
