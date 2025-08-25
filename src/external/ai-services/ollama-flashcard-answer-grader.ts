@@ -4,6 +4,30 @@ import type {
   FlashcardAnswerEvaluation,
 } from '../../application/ports/flashcard-answer-grader.js';
 
+const tools = [
+  {
+    type: 'function',
+    function: {
+      name: 'grade_response',
+      description: 'Grade the response provided by the user.',
+      parameters: {
+        type: 'object',
+        properties: {
+          grade: {
+            type: 'number',
+            description: '0 = wrong, 0.5 = close, 1 = correct',
+          },
+          reason: {
+            type: 'string',
+            description: 'Explanation for the given grade.',
+          },
+        },
+        required: ['grade', 'reason'],
+      },
+    },
+  },
+];
+
 class OllamaFlashcardAnswerGrader implements FlashcardAnswerGrader {
   async evaluate(input: {
     front: string;
@@ -14,18 +38,21 @@ class OllamaFlashcardAnswerGrader implements FlashcardAnswerGrader {
       {
         role: 'system',
         content:
-          'You grade flashcard answers. Respond in JSON with keys `score` (0, 0.5, or 1) and `comment`. ',
+          'You grade flashcard answers. ' +
+          'You will be provided the flashcard QUESTION, ANSWER and the answer given by the USER. ' +
+          'You must grade if the user has provided a correct answer for the card. ' +
+          'Call the grade_response tool with your grade and reasoning for the given grade.',
       },
       {
         role: 'user',
-        content:
-          `Front: ${input.front}\nCorrect Answer: ${input.back}\nUser Answer: ${input.answer}`,
+        content: `QUESTION: ${input.front}\nANSWER: ${input.back}\nUSER: ${input.answer}`,
       },
     ];
     const response = await ollama.chat({
       model: 'gpt-oss:20b',
       messages,
-      format: 'json',
+      think: 'medium',
+      tools: tools,
     });
     const content = response.message?.content ?? '{}';
     let parsed: unknown;
