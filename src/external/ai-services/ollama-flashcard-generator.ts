@@ -30,95 +30,92 @@ const tools = [
 
 class OllamaFlashcardGenerator implements FlashcardGenerator {
   public async generate(text: string): Promise<Array<Flashcard>> {
-    return [
-      {
-        back: 'Agents struggle with non-ASCII strings in CLI tools, e.g., feeding newlines or control characters via shell arguments.',
-        front: 'Why do non-ASCII string inputs cause issues with CLI tools?',
-      },
-      {
-        back: 'Claude Code performs a security preflight using the Haiku model before executing shell tools, which can block or slow down dangerous tool invocations.',
-        front: 'What is the security preflight step in Claude Code?',
-      },
-      {
-        back: 'Stateful session management is hard with CLI tools because agents must remember session names, e.g., tmux sessions can be renamed or forgotten, causing failures.',
-        front:
-          'Why is managing sessions difficult when using tmux with agents?',
-      },
-    ];
-
-    // const messages = [
+    // return [
     //   {
-    //     role: 'system',
-    //     content:
-    //       'You are an AI teacher. Read the document and create high-quality flashcards. ' +
-    //       'Only use the `create_flashcard` tool to output cards. Keep going, one card per tool call, ' +
-    //       'until there are no more good cards. When finished, reply with the single word DONE.',
+    //     back: 'Agents struggle with non-ASCII strings in CLI tools, e.g., feeding newlines or control characters via shell arguments.',
+    //     front: 'Why do non-ASCII string inputs cause issues with CLI tools?',
     //   },
-    //   { role: 'user', content: `Create flashcards for:\n---\n${text}` },
+    //   {
+    //     back: 'Claude Code performs a security preflight using the Haiku model before executing shell tools, which can block or slow down dangerous tool invocations.',
+    //     front: 'What is the security preflight step in Claude Code?',
+    //   },
+    //   {
+    //     back: 'Stateful session management is hard with CLI tools because agents must remember session names, e.g., tmux sessions can be renamed or forgotten, causing failures.',
+    //     front:
+    //       'Why is managing sessions difficult when using tmux with agents?',
+    //   },
     // ];
 
-    // const flashcards: Array<Flashcard> = [];
+    const messages = [
+      {
+        role: 'system',
+        content:
+          'You are an AI teacher. Read the document and create high-quality flashcards. ' +
+          'Only use the `create_flashcard` tool to output cards. Keep going, one card per tool call, ' +
+          'until there are no more good cards. When finished, reply with the single word DONE.',
+      },
+      { role: 'user', content: `Create flashcards for:\n---\n${text}` },
+    ];
 
-    // while (true) {
-    //   const response = await ollama.chat({
-    //     model: 'gpt-oss:20b',
-    //     messages: messages,
-    //     think: 'low',
-    //     tools: tools,
-    //   });
+    const flashcards: Array<Flashcard> = [];
 
-    //   // Check if the model is done
-    //   const isDone =
-    //     response?.message?.content?.trim().toUpperCase() === 'DONE';
+    while (true) {
+      const response = await ollama.chat({
+        model: 'gpt-oss:20b',
+        messages: messages,
+        think: 'low',
+        tools: tools,
+      });
 
+      // Check if the model is done
+      const isDoneMessage =
+        response?.message?.content?.trim().toUpperCase() === 'DONE';
 
-    //   if (
-    //     (!response.message?.tool_calls ||
-    //       response.message.tool_calls.length === 0) &&
-    //     isDone
-    //   ) {
-    //     break;
-    //   }
+      const areToolCallsExhausted =
+        !response.message?.tool_calls ||
+        response.message.tool_calls.length === 0;
 
-    //   // Execute any tool calls it requested
-    //   if (response.message?.tool_calls?.length) {
-    //     messages.push(response.message);
-    //     for (const call of response.message.tool_calls) {
-    //       if (call.function?.name === 'create_flashcard') {
-    //         const card = call.function.arguments as Flashcard;
-    //         console.log(card);
+      if (areToolCallsExhausted && isDoneMessage) {
+        break;
+      }
 
-    //         flashcards.push(card);
+      // Execute tool calls
+      if (response.message?.tool_calls?.length) {
+        messages.push(response.message);
+        for (const call of response.message.tool_calls) {
+          if (call.function?.name === 'create_flashcard') {
+            const card = call.function.arguments as Flashcard;
+            flashcards.push(card);
 
-    //         // Provide a tool "result" message so the model knows it succeeded
-    //         messages.push({
-    //           role: 'tool',
-    //           // Ollama accepts role: 'tool'; does it accept an ID?
-    //           content: JSON.stringify({
-    //             status: 'ok',
-    //             index: flashcards.length,
-    //           }),
-    //         });
-    //       }
-    //     }
+            // Provide a tool "result" message so the model knows it succeeded
+            messages.push({
+              role: 'tool',
+              // Ollama accepts role: 'tool'; does it accept an ID?
+              content: JSON.stringify({
+                status: 'ok',
+                index: flashcards.length,
+              }),
+            });
+          }
+        }
 
-    //     // Nudge it to continue
-    //     messages.push({
-    //       role: 'system',
-    //       content:
-    //         'Continue creating more unique, high-value flashcards. When no more remain, respond with DONE.',
-    //     });
-    //   } else {
-    //     // No tool calls and not "DONE" — give a gentle reminder
-    //     messages.push({
-    //       role: 'system',
-    //       content:
-    //         'Remember: output flashcards ONLY by calling the create_flashcard tool. Continue.',
-    //     });
-    //   }
-    // }
+        // Nudge it to continue
+        messages.push({
+          role: 'system',
+          content:
+            'Continue creating more unique, high-value flashcards. When no more remain, respond with DONE.',
+        });
+      } else {
+        // No tool calls and not "DONE" — give a gentle reminder
+        messages.push({
+          role: 'system',
+          content:
+            'Remember: output flashcards ONLY by calling the create_flashcard tool. Continue.',
+        });
+      }
+    }
 
-    // return flashcards;
+    return flashcards;
   }
 }
 
