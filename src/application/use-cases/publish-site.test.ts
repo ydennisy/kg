@@ -64,7 +64,13 @@ describe('PublishSiteUseCase', () => {
     expect(result.ok).toBe(true);
 
     const files = await fs.readdir(outputDir);
-    expect(files.sort()).toEqual(['index.html', 'nodes', 'styles.css']);
+    expect(files.sort()).toEqual([
+      'graph-data.js',
+      'graph.html',
+      'index.html',
+      'nodes',
+      'styles.css',
+    ]);
 
     const nodeFiles = await fs.readdir(path.join(outputDir, 'nodes'));
     expect(nodeFiles).toEqual([`${publicNote.id}.html`]);
@@ -240,7 +246,12 @@ describe('PublishSiteUseCase', () => {
     await useCase.execute();
 
     const files = await fs.readdir(outputDir);
-    expect(files.sort()).toEqual(['index.html', 'styles.css']);
+    expect(files.sort()).toEqual([
+      'graph-data.js',
+      'graph.html',
+      'index.html',
+      'styles.css',
+    ]);
 
     const index = await fs.readFile(path.join(outputDir, 'index.html'), 'utf8');
     expect(index).toContain('0 nodes published');
