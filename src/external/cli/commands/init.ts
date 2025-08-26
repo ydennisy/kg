@@ -1,9 +1,9 @@
 import os from 'node:os';
 import path from 'node:path';
 import { Command } from 'commander';
+import { migrate } from 'drizzle-orm/libsql/migrator';
 import { createDatabaseClient } from '../../database/client.js';
 import type { ConfigLoader } from '../../config/config-loader.js';
-import { migrate } from 'drizzle-orm/libsql/migrator';
 
 class InitCommand {
   constructor(private configLoader: ConfigLoader) {}
