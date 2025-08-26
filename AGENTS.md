@@ -80,6 +80,11 @@ pnpm test --grep "creates a note"
 This is a **VERY IMPORTANT** section, make sure you evaluate your changes based
 on this section at all times.
 
+### General
+
+- Never opt for a quick and hacky fix, always look for the cleanest and most
+  ergonomic solution.
+
 ### Code style
 
 - Avoid type casting wherever possible.

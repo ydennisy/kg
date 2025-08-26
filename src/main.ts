@@ -3,6 +3,13 @@ import { ConfigLoader } from './external/config/config-loader.js';
 import { ApplicationFactory } from './application/application-factory.js';
 
 const run = async () => {
+  // TODO: this feel like a bit of a hack, but the other
+  // option would be to add config checks inside each usecase.
+  if (process.argv[2] === 'init') {
+    CLI.init();
+    return;
+  }
+
   const configLoader = new ConfigLoader();
   const config = await configLoader.load();
 
@@ -11,7 +18,7 @@ const run = async () => {
       `
       Welcome to KG!
       You are missing a configuration.
-      Please run: kg install
+      Please run: kg init
       `
     );
     return;
