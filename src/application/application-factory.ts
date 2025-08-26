@@ -23,7 +23,7 @@ class ApplicationFactory {
   constructor(private config: AppConfig) {}
 
   public createUseCases() {
-    const db = createDatabaseClient(this.config.databaseUrl);
+    const db = createDatabaseClient(`file:${this.config.databaseUrl}`);
     const mapper = new NodeMapper();
     const repository = new SqliteNodeRepository(db, mapper);
     const htmlGenerator = new HTMLGenerator();

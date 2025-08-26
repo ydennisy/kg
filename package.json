@@ -3,7 +3,7 @@
   "version": "0.0.0-dev.2",
   "type": "module",
   "scripts": {
-    "kg": "tsx src/main.ts",
+    "kg": "tsx --env-file=.env src/main.ts",
     "build": "tsc",
     "test": "vitest",
     "format": "prettier --write .",

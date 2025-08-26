@@ -7,6 +7,18 @@ class ConfigLoader {
   private configPath = path.join(os.homedir(), '.kg', 'config.json');
 
   async load(): Promise<AppConfig | undefined> {
+    const isDev = process.env.NODE_ENV === 'development';
+
+    if (isDev && process.env.DATABASE_URL) {
+      return {
+        databaseUrl: process.env.DATABASE_URL,
+      };
+    } else if (isDev) {
+      throw new Error(
+        'when NODE_ENV is set to `development`, DATABASE_URL must be provided'
+      );
+    }
+
     try {
       const config = await fs.readFile(this.configPath, 'utf-8');
       return JSON.parse(config);
