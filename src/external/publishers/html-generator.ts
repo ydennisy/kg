@@ -336,7 +336,7 @@ export class HTMLGenerator implements SiteGenerator {
   private generateGraphData(nodes: AnyNode[]): string {
     const graphNodes: GraphNodeData[] = nodes.map((node) => ({
       id: node.id,
-      label: `${node.id}\n${this.truncate(this.getNodeTitleText(node), 20)}`,
+      label: this.truncate(this.getNodeTitleText(node), 20),
       type: node.type,
       color: this.getNodeColor(node.type),
     }));
@@ -390,6 +390,9 @@ export class HTMLGenerator implements SiteGenerator {
     <link rel="stylesheet" href="styles.css">
     <style>
       #cy { width: 100%; height: 800px; border: 1px solid var(--border); border-radius: 8px; }
+      .legend { margin-top: 1rem; font-size: 0.9rem; }
+      .legend-item { display: flex; align-items: center; margin-bottom: 4px; }
+      .legend-color { width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; display: inline-block; }
       .faded { opacity: 0.1; }
     </style>
     <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
@@ -404,6 +407,12 @@ export class HTMLGenerator implements SiteGenerator {
 
     <main>
         <div id="cy"></div>
+        <div id="legend" class="legend">
+          <div class="legend-item"><span class="legend-color" style="background:#0066cc"></span> Note</div>
+          <div class="legend-item"><span class="legend-color" style="background:#ff6b6b"></span> Link</div>
+          <div class="legend-item"><span class="legend-color" style="background:#2ca02c"></span> Tag</div>
+          <div class="legend-item"><span class="legend-color" style="background:#8e44ad"></span> Flashcard</div>
+        </div>
     </main>
 
     <script>
@@ -413,7 +422,7 @@ export class HTMLGenerator implements SiteGenerator {
           nodes: window.graphData.nodes.map((n) => ({ data: n })),
           edges: window.graphData.edges.map((e) => ({ data: e })),
         },
-        layout: { name: 'cose' },
+        layout: { name: 'cose', idealEdgeLength: 200, nodeRepulsion: 1000000, padding: 50 },
         style: [
           {
             selector: 'node',
@@ -435,6 +444,7 @@ export class HTMLGenerator implements SiteGenerator {
               'target-arrow-color': '#999999',
               'source-arrow-color': '#999999',
               'target-arrow-shape': 'triangle',
+              width: 1,
               'text-rotation': 'autorotate',
               label: 'data(label)',
               'font-size': '8px',
@@ -454,6 +464,11 @@ export class HTMLGenerator implements SiteGenerator {
             style: { opacity: 0.1 },
           },
         ],
+      });
+
+      cy.on('layoutstop', () => {
+        cy.fit(undefined, 50);
+        cy.zoom(cy.zoom() * 0.9);
       });
 
       cy.on('tap', 'node', (evt) => {
