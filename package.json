@@ -18,8 +18,8 @@
   },
   "scripts": {
     "kg": "tsx --env-file=.env src/main.ts",
-    "build": "tsc && node scripts/post-build.js",
-    "build:prod": "tsc -p tsconfig.production.json && node scripts/post-build.js",
+    "build": "tsc && tsx scripts/post-build.ts",
+    "build:prod": "tsc -p tsconfig.production.json && tsx scripts/post-build.ts",
     "build:clean": "rm -rf dist && pnpm build",
     "build:clean:prod": "rm -rf dist && pnpm build:prod",
     "test": "vitest",

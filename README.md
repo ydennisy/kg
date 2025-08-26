@@ -1,4 +1,4 @@
-# `kg`: Knowledge Graph
+# `kg`: Knowledge Graph One
 
 `kg` is a knowledge management application, designed to help:
 
