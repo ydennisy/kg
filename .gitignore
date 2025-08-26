@@ -7,3 +7,7 @@ data
 .kg
 .tsbuildinfo
 **.db
+
+# NPM package tarballs
+*.tgz
+kg1-*.tgz

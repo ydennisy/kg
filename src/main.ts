@@ -31,6 +31,7 @@ const run = async () => {
   cli.run(process.argv);
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this module is being run directly (handles both direct execution and npm link)
+if (process.argv[1] && import.meta.url.startsWith('file://')) {
   run().catch(console.error);
 }

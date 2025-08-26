@@ -1,14 +1,34 @@
 {
-  "name": "kg",
+  "name": "kg1",
   "version": "0.0.0-dev.2",
+  "description": "A knowledge graph CLI for personal knowledge management",
   "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "bin": {
+    "kg": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "kg": "tsx --env-file=.env src/main.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/post-build.js",
+    "build:prod": "tsc -p tsconfig.production.json && node scripts/post-build.js",
+    "build:clean": "rm -rf dist && pnpm build",
+    "build:clean:prod": "rm -rf dist && pnpm build:prod",
     "test": "vitest",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build:clean:prod && pnpm typecheck && pnpm test run",
     "repomix": "pnpx repomix --include 'src/**/*,AGENTS.md,README.md'",
+    "cli:link": "npm link",
+    "cli:unlink": "npm unlink -g kg1-cli",
     "site:build": "pnpm run build && node dist/main.js publish",
     "site:serve": "pnpx serve public",
     "site:deploy": "dotenvx run -- pnpx vercel deploy public --prod --yes",
