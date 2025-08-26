@@ -3,8 +3,10 @@ import { sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
 import { SqliteNodeRepository } from './sqlite-node-repository.js';
-import { SqliteSearchIndex } from '../search-index/sqlite-search-index.js';
-import { createTestDatabase, type TestDatabase } from '../../../test/database.js';
+import {
+  createTestDatabase,
+  type TestDatabase,
+} from '../../../test/database.js';
 
 const nodes = [
   {
@@ -30,7 +32,6 @@ const nodes = [
 describe('SqliteNodeRepository', () => {
   let db: TestDatabase;
   let repository: SqliteNodeRepository;
-  let searchIndex: SqliteSearchIndex;
 
   beforeEach(async () => {
     db = await createTestDatabase();
