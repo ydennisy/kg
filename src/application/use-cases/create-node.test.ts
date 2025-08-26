@@ -1,72 +1,86 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, beforeEach, expect, vi } from 'vitest';
 import { CreateNodeUseCase } from './create-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { Crawler } from '../ports/crawler.js';
-import type { AnyNode } from '../../domain/types.js';
-
-const mockRepository: NodeRepository = {
-  save: async (node: AnyNode) => Promise.resolve(),
-  update: async (node: AnyNode) => Promise.resolve(),
-  delete: async (id: string) => Promise.resolve(),
-  findById: async (id: string) => Promise.resolve(null),
-  findAll: async () => Promise.resolve([]),
-  search: async (query: string, withRelations?: boolean) => Promise.resolve([]),
-  link: async (sourceId: string, targetId: string, type?) => Promise.resolve(),
-  findDueFlashcards: async (date, limit) => Promise.resolve([]),
-};
-
-const mockCrawler: Crawler = {
-  fetch: async (url: string) => ({
-    url,
-    title: undefined,
-    text: 'Example Website Title',
-    markdown: 'Example Website Title',
-    html: '<p>Example Website Title</p>',
-  }),
-};
-
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+import { assertOk } from '../../../test/assert.js';
 
 describe('CreateNodeUseCase', () => {
-  test('creates a `note` node successfully', async () => {
-    const useCase = new CreateNodeUseCase(
-      mockRepository,
-      mockCrawler
-    );
+  let repository: NodeRepository;
+  let crawler: Crawler;
+  let useCase: CreateNodeUseCase;
+
+  beforeEach(() => {
+    repository = { save: vi.fn() } as unknown as NodeRepository;
+    crawler = { fetch: vi.fn() } as unknown as Crawler;
+    useCase = new CreateNodeUseCase(repository, crawler);
+  });
+
+  test('creates a note node', async () => {
     const result = await useCase.execute({
       type: 'note',
       title: 'My Note',
       data: { content: 'hello world' },
       isPublic: false,
     });
-
-    expect(result.ok).toBe(true);
-    if (result.ok && result.result.type === 'note') {
-      expect(result.result.type).toBe('note');
-      expect(result.result.title).toBe('My Note');
-      expect(result.result.content).toBe('hello world');
-      expect(result.result.isPublic).toBe(false);
-    }
+    assertOk(result);
+    expect(result.result.type).toBe('note');
+    expect(repository.save).toHaveBeenCalledWith(result.result);
   });
 
-  test('creates a `link` node successfully', async () => {
-    const useCase = new CreateNodeUseCase(
-      mockRepository,
-      mockCrawler
-    );
+  test('creates a link node using crawler data', async () => {
+    vi.mocked(crawler.fetch).mockResolvedValue({
+      url: 'https://example.com',
+      title: 'Example',
+      text: 'Example',
+      markdown: 'Example',
+      html: '<p>Example</p>',
+    });
+
     const result = await useCase.execute({
       type: 'link',
       data: { url: 'https://example.com' },
-      isPublic: false,
+      isPublic: true,
     });
+    assertOk(result);
+    expect(crawler.fetch).toHaveBeenCalledWith('https://example.com');
+    expect(result.result.type).toBe('link');
+    expect(repository.save).toHaveBeenCalledWith(result.result);
+  });
 
-    expect(result.ok).toBe(true);
-    if (result.ok && result.result.type === 'link') {
-      expect(result.result.type).toBe('link');
-      expect(result.result.data.url).toBe('https://example.com');
+  test('creates a tag node', async () => {
+    const result = await useCase.execute({
+      type: 'tag',
+      isPublic: false,
+      data: { name: 'math', description: 'numbers' },
+    });
+    assertOk(result);
+    expect(result.result.type).toBe('tag');
+    expect(repository.save).toHaveBeenCalledWith(result.result);
+  });
+
+  test('creates a flashcard node', async () => {
+    const result = await useCase.execute({
+      type: 'flashcard',
+      isPublic: true,
+      data: { front: '2+2', back: '4' },
+    });
+    assertOk(result);
+    expect(result.result.type).toBe('flashcard');
+    expect(repository.save).toHaveBeenCalledWith(result.result);
+  });
+
+  test('returns error when repository throws', async () => {
+    vi.mocked(repository.save).mockRejectedValue(new Error('db error'));
+    const result = await useCase.execute({
+      type: 'note',
+      title: 'Err',
+      isPublic: false,
+      data: { content: 'x' },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('db error');
     }
   });
 });
+
