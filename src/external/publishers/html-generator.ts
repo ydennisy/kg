@@ -1,5 +1,5 @@
 import { marked } from 'marked';
-import type { AnyNode } from '../../domain/types.js';
+import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
 import type {
   SiteGenerator,
   SiteFile,
@@ -23,6 +23,21 @@ interface ContentData {
   content: string;
 }
 
+interface GraphNodeData {
+  id: string;
+  label: string;
+  type: NodeType;
+  color: string;
+}
+
+interface GraphEdgeData {
+  id: string;
+  source: string;
+  target: string;
+  label: EdgeType;
+  bidirectional: boolean;
+}
+
 export class HTMLGenerator implements SiteGenerator {
   public async generate(nodes: AnyNode[]): Promise<SiteFile[]> {
     const files: SiteFile[] = [];
@@ -40,6 +55,17 @@ export class HTMLGenerator implements SiteGenerator {
         content: this.generateNodePage(node, nodes),
       });
     }
+
+    // Generate graph view
+    files.push({
+      path: 'graph-data.js',
+      content: this.generateGraphData(nodes),
+    });
+
+    files.push({
+      path: 'graph.html',
+      content: this.generateGraphPage(),
+    });
 
     // Generate CSS
     files.push({
@@ -100,6 +126,9 @@ export class HTMLGenerator implements SiteGenerator {
 </head>
 <body>
     <header>
+        <nav>
+            <a href="graph.html">Graph view</a>
+        </nav>
         <h1>Knowledge Graph</h1>
         <p>${nodes.length} nodes published</p>
     </header>
@@ -238,15 +267,18 @@ export class HTMLGenerator implements SiteGenerator {
   }
 
   private getNodeTitle(node: AnyNode): string {
+    return this.escapeHtml(this.getNodeTitleText(node));
+  }
+
+  private getNodeTitleText(node: AnyNode): string {
     if (
       node.title &&
       typeof node.title === 'string' &&
       node.title.trim().length > 0
     ) {
-      return this.escapeHtml(node.title);
+      return node.title;
     }
 
-    // Fallback to previous heuristics if title is missing
     switch (node.type) {
       case 'link':
         const linkData = (node as any).data;
@@ -285,6 +317,161 @@ export class HTMLGenerator implements SiteGenerator {
 
   private capitalize(str: string): string {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  private truncate(text: string, length: number): string {
+    return text.length > length ? `${text.slice(0, length - 1)}…` : text;
+  }
+
+  private getNodeColor(type: NodeType): string {
+    const colors: Record<NodeType, string> = {
+      note: '#0066cc',
+      link: '#ff6b6b',
+      tag: '#2ca02c',
+      flashcard: '#8e44ad',
+    };
+    return colors[type];
+  }
+
+  private generateGraphData(nodes: AnyNode[]): string {
+    const graphNodes: GraphNodeData[] = nodes.map((node) => ({
+      id: node.id,
+      label: `${node.id}\n${this.truncate(this.getNodeTitleText(node), 20)}`,
+      type: node.type,
+      color: this.getNodeColor(node.type),
+    }));
+
+    const edges: GraphEdgeData[] = [];
+    const seen = new Set<string>();
+
+    for (const node of nodes) {
+      for (const rel of node.relatedNodes) {
+        let source: string;
+        let target: string;
+        let bidirectional = false;
+
+        if (rel.relationship.direction === 'both') {
+          const [a, b] =
+            node.id < rel.node.id ? [node.id, rel.node.id] : [rel.node.id, node.id];
+          const key = `${a}|${b}|${rel.relationship.type}|both`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          source = a;
+          target = b;
+          bidirectional = true;
+        } else {
+          source = rel.relationship.direction === 'from' ? node.id : rel.node.id;
+          target = rel.relationship.direction === 'from' ? rel.node.id : node.id;
+          const key = `${source}|${target}|${rel.relationship.type}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+        }
+
+        edges.push({
+          id: `${source}_${target}_${rel.relationship.type}`,
+          source,
+          target,
+          label: rel.relationship.type,
+          bidirectional,
+        });
+      }
+    }
+
+    return `window.graphData = ${JSON.stringify({ nodes: graphNodes, edges }, null, 2)};`;
+  }
+
+  private generateGraphPage(): string {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Graph - Network</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      #cy { width: 100%; height: 800px; border: 1px solid var(--border); border-radius: 8px; }
+      .faded { opacity: 0.1; }
+    </style>
+    <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+    <script src="graph-data.js"></script>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="index.html">← Back to Index</a>
+        </nav>
+    </header>
+
+    <main>
+        <div id="cy"></div>
+    </main>
+
+    <script>
+      const cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: {
+          nodes: window.graphData.nodes.map((n) => ({ data: n })),
+          edges: window.graphData.edges.map((e) => ({ data: e })),
+        },
+        layout: { name: 'cose' },
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': 'data(color)',
+              label: 'data(label)',
+              'text-wrap': 'wrap',
+              'text-max-width': '80px',
+              'font-size': '10px',
+              'text-valign': 'center',
+              color: '#333333',
+            },
+          },
+          {
+            selector: 'edge',
+            style: {
+              'curve-style': 'bezier',
+              'line-color': '#999999',
+              'target-arrow-color': '#999999',
+              'source-arrow-color': '#999999',
+              'target-arrow-shape': 'triangle',
+              'text-rotation': 'autorotate',
+              label: 'data(label)',
+              'font-size': '8px',
+              'text-background-opacity': 1,
+              'text-background-color': '#ffffff',
+              'text-background-padding': '2px',
+            },
+          },
+          {
+            selector: 'edge[bidirectional]',
+            style: {
+              'source-arrow-shape': 'triangle',
+            },
+          },
+          {
+            selector: '.faded',
+            style: { opacity: 0.1 },
+          },
+        ],
+      });
+
+      cy.on('tap', 'node', (evt) => {
+        const node = evt.target;
+        cy.elements().addClass('faded');
+        node.removeClass('faded');
+        node.connectedEdges().removeClass('faded');
+        node.connectedEdges().connectedNodes().removeClass('faded');
+      });
+
+      cy.on('tap', (evt) => {
+        if (evt.target === cy) {
+          cy.elements().removeClass('faded');
+        }
+      });
+    </script>
+</body>
+</html>`;
   }
 
   private generateCSS(): string {

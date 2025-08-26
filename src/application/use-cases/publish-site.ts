@@ -16,8 +16,15 @@ class PublishSiteUseCase {
       const allNodes = await this.repository.findAll();
       const publicNodes = allNodes.filter((n) => n.isPublic);
 
+      // Load relations for each public node
+      const nodesWithRelations: typeof publicNodes = [];
+      for (const node of publicNodes) {
+        const withRelations = await this.repository.findById(node.id, true);
+        nodesWithRelations.push(withRelations ?? node);
+      }
+
       // Generate site files
-      const siteFiles = await this.siteGenerator.generate(publicNodes);
+      const siteFiles = await this.siteGenerator.generate(nodesWithRelations);
 
       // Ensure output directory exists
       await fs.mkdir(this.outputDir, { recursive: true });
