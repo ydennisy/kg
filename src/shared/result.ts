@@ -1,6 +1,6 @@
 type Success<T> = {
   ok: true;
-  result: T;
+  value: T;
 };
 
 type Failure<E extends Error = Error> = {
@@ -12,7 +12,7 @@ type Result<T, E extends Error = Error> = Success<T> | Failure<E>;
 
 const Result = {
   success<T>(value: T): Success<T> {
-    return { ok: true, result: value };
+    return { ok: true, value };
   },
 
   failure<E extends Error>(error: E): Failure<E> {
