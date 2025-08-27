@@ -1,14 +1,12 @@
 import { Command } from 'commander';
-import { select, input } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import type { GetDueFlashcardsUseCase } from '../../../application/use-cases/get-due-flashcards.js';
-import type { ReviewFlashcardUseCase } from '../../../application/use-cases/review-flashcard.js';
-import type { EvaluateFlashcardAnswerUseCase } from '../../../application/use-cases/evaluate-flashcard-answer.js';
+import type { ReviewFlashcardAnswerUseCase } from '../../../application/use-cases/review-flashcard-answer.js';
 
 class ReviewCommand {
   constructor(
     private readonly getDueFlashcardsUseCase: GetDueFlashcardsUseCase,
-    private readonly reviewFlashcardUseCase: ReviewFlashcardUseCase,
-    private readonly evaluateFlashcardAnswerUseCase: EvaluateFlashcardAnswerUseCase
+    private readonly reviewFlashcardAnswerUseCase: ReviewFlashcardAnswerUseCase
   ) {}
 
   register(program: Command): void {
@@ -37,40 +35,25 @@ class ReviewCommand {
       console.log(`\n📚 Card ${i + 1} of ${cards.length}`);
       console.log(`Front: ${card.data.front}`);
       const answer = await input({
-        message: 'Type your answer (leave empty to skip):',
+        message: 'Type your answer:',
       });
-      if (answer.trim() !== '') {
-        const evaluation = await this.evaluateFlashcardAnswerUseCase.execute({
-          front: card.data.front,
-          back: card.data.back,
-          answer,
-        });
-        if (evaluation.ok) {
-          const score = evaluation.value.score;
-          const label =
-            score === 1 ? '✅ Correct' : score === 0.5 ? '⚠️ Partially correct' : '❌ Incorrect';
-          console.log(`${label}: ${evaluation.value.comment}`);
-        } else {
-          console.error(`  ❌ Failed to grade answer: ${evaluation.error.message}`);
-        }
-      }
-      console.log(`Back: ${card.data.back}`);
-      const quality = await select({
-        message: 'How well did you recall this card?',
-        choices: [
-          { name: 'Again', value: 0 },
-          { name: 'Hard', value: 3 },
-          { name: 'Good', value: 4 },
-          { name: 'Easy', value: 5 },
-        ],
+      const review = await this.reviewFlashcardAnswerUseCase.execute({
+        id: card.id,
+        answer,
       });
-      const review = await this.reviewFlashcardUseCase.execute({
-        flashcard: card,
-        quality,
-      });
-      if (!review.ok) {
+      if (review.ok) {
+        const score = review.value.evaluation.score;
+        const label =
+          score === 1
+            ? '✅ Correct'
+            : score === 0.5
+            ? '⚠️ Partially correct'
+            : '❌ Incorrect';
+        console.log(`${label}: ${review.value.evaluation.comment}`);
+      } else {
         console.error(`  ❌ Failed to review card: ${review.error.message}`);
       }
+      console.log(`Back: ${card.data.back}`);
     }
 
     console.log('\n✅ Review session complete');

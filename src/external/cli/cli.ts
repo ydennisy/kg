@@ -14,8 +14,7 @@ import type { GetNodeUseCase } from '../../application/use-cases/get-node.js';
 import type { GenerateFlashcardsUseCase } from '../../application/use-cases/generate-flashcards.js';
 import type { PublishSiteUseCase } from '../../application/use-cases/publish-site.js';
 import type { GetDueFlashcardsUseCase } from '../../application/use-cases/get-due-flashcards.js';
-import type { ReviewFlashcardUseCase } from '../../application/use-cases/review-flashcard.js';
-import type { EvaluateFlashcardAnswerUseCase } from '../../application/use-cases/evaluate-flashcard-answer.js';
+import type { ReviewFlashcardAnswerUseCase } from '../../application/use-cases/review-flashcard-answer.js';
 
 type UseCases = {
   createNode: CreateNodeUseCase;
@@ -25,8 +24,7 @@ type UseCases = {
   generateFlashcards: GenerateFlashcardsUseCase;
   publishSite: PublishSiteUseCase;
   getDueFlashcards: GetDueFlashcardsUseCase;
-  reviewFlashcard: ReviewFlashcardUseCase;
-  evaluateFlashcardAnswer: EvaluateFlashcardAnswerUseCase;
+  reviewFlashcardAnswer: ReviewFlashcardAnswerUseCase;
 };
 
 class CLI {
@@ -73,8 +71,7 @@ class CLI {
 
     new ReviewCommand(
       useCases.getDueFlashcards,
-      useCases.reviewFlashcard,
-      useCases.evaluateFlashcardAnswer
+      useCases.reviewFlashcardAnswer
     ).register(this.program);
   }
 
