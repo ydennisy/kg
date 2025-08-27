@@ -3,6 +3,7 @@ import type {
   Flashcard,
 } from '../ports/flashcard-generator.js';
 import type { NodeRepository } from '../ports/node-repository.js';
+import { Result } from '../../shared/result.js';
 
 type GenerateFlashcardsInput = {
   id: string;
@@ -16,13 +17,11 @@ class GenerateFlashcardsUseCase {
 
   async execute(
     input: GenerateFlashcardsInput
-  ): Promise<
-    { ok: true; result: Array<Flashcard> } | { ok: false; error: string }
-  > {
+  ): Promise<Result<Array<Flashcard>, Error>> {
     try {
       const node = await this.repository.findById(input.id, false);
       if (!node) {
-        return { ok: false, error: 'Node not found' };
+        return Result.failure(new Error('Node not found'));
       }
 
       let text: string;
@@ -36,16 +35,18 @@ class GenerateFlashcardsUseCase {
         text = `${node.title} | ${node.data.content}`;
         flashcards = await this.flashcardGenerator.generate(text);
       } else {
-        return {
-          ok: false,
-          error:
-            'Flashcards can be generated only from `note` or `link` node types',
-        };
+        return Result.failure(
+          new Error(
+            'Flashcards can be generated only from `note` or `link` node types'
+          )
+        );
       }
 
-      return { ok: true, result: flashcards };
+      return Result.success(flashcards);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

@@ -71,11 +71,11 @@ class CreateCommand {
 
       if (result && result.ok) {
         console.log(
-          `✅ Created ${nodeType} node with ID: ${result.result.node.id}`
+          `✅ Created ${nodeType} node with ID: ${result.value.node.id}`
         );
 
-        if (result.result.warning) {
-          console.warn(`⚠️  ${result.result.warning}`);
+        if (result.value.warning) {
+          console.warn(`⚠️  ${result.value.warning}`);
         }
 
         const shouldLink = await confirm({
@@ -84,10 +84,10 @@ class CreateCommand {
         });
 
         if (shouldLink) {
-          await this.linkNode(result.result.node.id);
+          await this.linkNode(result.value.node.id);
         }
       } else {
-        console.error(`❌ Error creating node: ${result.error}`);
+        console.error(`❌ Error creating node: ${result.error.message}`);
         process.exit(1);
       }
     } catch (error) {
@@ -213,7 +213,7 @@ class CreateCommand {
           });
           if (!linkResult.ok) {
             console.error(
-              `❌ Error linking to node ${targetNodeId}: ${linkResult.error}`
+              `❌ Error linking to node ${targetNodeId}: ${linkResult.error.message}`
             );
           }
         }

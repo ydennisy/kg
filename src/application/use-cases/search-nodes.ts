@@ -1,4 +1,5 @@
 import type { NodeRepository, SearchResult } from '../ports/node-repository.js';
+import { Result } from '../../shared/result.js';
 
 type SearchNodesInput = {
   query: string;
@@ -10,11 +11,9 @@ class SearchNodesUseCase {
 
   async execute(
     input: SearchNodesInput
-  ): Promise<
-    { ok: true; result: Array<SearchResult> } | { ok: false; error: string }
-  > {
+  ): Promise<Result<Array<SearchResult>, Error>> {
     if (!input.query.trim()) {
-      return { ok: true, result: [] };
+      return Result.success([]);
     }
 
     try {
@@ -22,9 +21,11 @@ class SearchNodesUseCase {
         input.query,
         input.withRelations
       );
-      return { ok: true, result };
+      return Result.success(result);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

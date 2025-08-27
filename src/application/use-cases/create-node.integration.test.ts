@@ -43,7 +43,7 @@ describe('CreateNodeUseCase (integration)', () => {
 
     assertOk(result);
 
-    const stored = await repository.findById(result.result.id);
+    const stored = await repository.findById(result.value.node.id);
     expect(stored?.title).toBe('Integration Note');
   });
 
@@ -56,8 +56,8 @@ describe('CreateNodeUseCase (integration)', () => {
 
     assertOk(result);
 
-    const stored = await repository.findById(result.result.id);
-    expect(stored?.id).toBe(result.result.id);
+    const stored = await repository.findById(result.value.node.id);
+    expect(stored?.id).toBe(result.value.node.id);
     if (stored && stored.type === 'link') {
       expect(stored.data.crawled.title).toBe('Example');
     } else {

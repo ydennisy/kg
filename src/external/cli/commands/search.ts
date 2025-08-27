@@ -65,13 +65,13 @@ class SearchCommand {
     const result = await this.getNodeUseCase.execute({ id: nodeId });
 
     if (!result.ok) {
-      console.error(`❌ Error fetching node: ${result.error}`);
+      console.error(`❌ Error fetching node: ${result.error.message}`);
       process.exit(1);
     }
 
     await editor({
       message: 'Read only node was displayed in the editor',
-      default: JSON.stringify(result.result, undefined, 2),
+      default: JSON.stringify(result.value, undefined, 2),
       waitForUseInput: false,
     });
   }

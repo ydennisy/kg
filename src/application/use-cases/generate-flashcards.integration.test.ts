@@ -38,7 +38,7 @@ describe('GenerateFlashcardsUseCase (integration)', () => {
 
     const result = await useCase.execute({ id: note.id });
     assertOk(result);
-    expect(result.result).toHaveLength(3);
+    expect(result.value).toHaveLength(3);
   });
 
   test('generates flashcards for link node', async () => {
@@ -58,14 +58,14 @@ describe('GenerateFlashcardsUseCase (integration)', () => {
 
     const result = await useCase.execute({ id: link.id });
     assertOk(result);
-    expect(result.result).toHaveLength(3);
+    expect(result.value).toHaveLength(3);
   });
 
   test('returns error when node does not exist', async () => {
     const result = await useCase.execute({ id: 'missing' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('Node not found');
+      expect(result.error.message).toBe('Node not found');
     }
   });
 
@@ -79,7 +79,7 @@ describe('GenerateFlashcardsUseCase (integration)', () => {
     const result = await useCase.execute({ id: tag.id });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe(
+      expect(result.error.message).toBe(
         'Flashcards can be generated only from `note` or `link` node types'
       );
     }

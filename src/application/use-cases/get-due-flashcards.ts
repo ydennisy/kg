@@ -1,5 +1,6 @@
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { FlashcardNode } from '../../domain/flashcard-node.js';
+import { Result } from '../../shared/result.js';
 
 class GetDueFlashcardsUseCase {
   constructor(private readonly repository: NodeRepository) {}
@@ -7,17 +8,17 @@ class GetDueFlashcardsUseCase {
   async execute(input: {
     limit: number;
     date?: Date;
-  }): Promise<
-    { ok: true; result: FlashcardNode[] } | { ok: false; error: string }
-  > {
+  }): Promise<Result<FlashcardNode[], Error>> {
     try {
       const cards = await this.repository.findDueFlashcards(
         input.date ?? new Date(),
         input.limit
       );
-      return { ok: true, result: cards };
+      return Result.success(cards);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

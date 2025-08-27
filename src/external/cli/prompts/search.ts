@@ -45,13 +45,13 @@ async function searchPrompt(
       if (!result.ok) {
         return [
           {
-            name: `Error: ${result.error}`,
+            name: `Error: ${result.error.message}`,
             value: '',
             disabled: true,
           },
         ];
       }
-      let results = result.result;
+      let results = result.value;
       if (options?.filterResults) {
         results = options.filterResults(results);
       }

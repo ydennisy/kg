@@ -1,5 +1,6 @@
 import type { AnyNode } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
+import { Result } from '../../shared/result.js';
 
 type GetNodeInput = {
   id: string;
@@ -8,17 +9,17 @@ type GetNodeInput = {
 class GetNodeUseCase {
   constructor(private readonly repository: NodeRepository) {}
 
-  async execute(
-    input: GetNodeInput
-  ): Promise<{ ok: true; result: AnyNode } | { ok: false; error: string }> {
+  async execute(input: GetNodeInput): Promise<Result<AnyNode, Error>> {
     try {
       const result = await this.repository.findById(input.id, false);
       if (!result) {
-        return { ok: false, error: 'Node not found' };
+        return Result.failure(new Error('Node not found'));
       }
-      return { ok: true, result };
+      return Result.success(result);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

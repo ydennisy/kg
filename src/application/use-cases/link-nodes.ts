@@ -1,5 +1,6 @@
 import type { EdgeType } from '../../domain/types.js';
 import type { NodeRepository } from '../ports/node-repository.js';
+import { Result } from '../../shared/result.js';
 
 type LinkNodesInput = {
   fromId: string;
@@ -11,7 +12,7 @@ type LinkNodesInput = {
 class LinkNodesUseCase {
   constructor(private readonly repository: NodeRepository) {}
 
-  async execute(input: LinkNodesInput) {
+  async execute(input: LinkNodesInput): Promise<Result<void, Error>> {
     try {
       await this.repository.link(
         input.fromId,
@@ -19,9 +20,11 @@ class LinkNodesUseCase {
         input.type,
         input.isBidirectional
       );
-      return { ok: true as const };
+      return Result.success(undefined);
     } catch (err) {
-      return { ok: false as const, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

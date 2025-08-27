@@ -21,10 +21,10 @@ class PublishCommand {
 
       if (result.ok) {
         console.log(
-          `✅ Successfully published ${result.result.filesGenerated} files to ${result.result.outputDir}`
+          `✅ Successfully published ${result.value.filesGenerated} files to ${result.value.outputDir}`
         );
       } else {
-        console.error(`❌ Error publishing site: ${result.error}`);
+        console.error(`❌ Error publishing site: ${result.error.message}`);
         process.exit(1);
       }
     } catch (error) {

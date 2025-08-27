@@ -34,11 +34,11 @@ class GenerateFlashcardsCommand {
     });
 
     if (!result.ok) {
-      console.error(`❌ Error generating flashcards: ${result.error}`);
+      console.error(`❌ Error generating flashcards: ${result.error.message}`);
       process.exit(1);
     }
 
-    const flashcards = result.result;
+    const flashcards = result.value;
 
     if (flashcards.length === 0) {
       console.log('No flashcards were generated.');
@@ -74,9 +74,11 @@ class GenerateFlashcardsCommand {
         isPublic: makePublic,
       });
       if (saveResult.ok) {
-        createdIds.push(saveResult.result.node.id);
+        createdIds.push(saveResult.value.node.id);
       } else {
-        console.error(`  ❌ Failed to save a flashcard: ${saveResult.error}`);
+        console.error(
+          `  ❌ Failed to save a flashcard: ${saveResult.error.message}`
+        );
       }
     }
 
@@ -90,7 +92,7 @@ class GenerateFlashcardsCommand {
         isBidirectional: true,
       });
       if (!linkRes.ok) {
-        console.error(`  ❌ Failed to link ${id}: ${linkRes.error}`);
+        console.error(`  ❌ Failed to link ${id}: ${linkRes.error.message}`);
       }
     }
     console.log(
