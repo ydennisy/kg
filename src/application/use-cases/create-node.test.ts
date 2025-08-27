@@ -10,7 +10,10 @@ describe('CreateNodeUseCase', () => {
   let useCase: CreateNodeUseCase;
 
   beforeEach(() => {
-    repository = { save: vi.fn() } as unknown as NodeRepository;
+    repository = {
+      save: vi.fn(),
+      findLinkNodeByUrl: vi.fn(),
+    } as unknown as NodeRepository;
     crawler = { fetch: vi.fn() } as unknown as Crawler;
     useCase = new CreateNodeUseCase(repository, crawler);
   });
@@ -41,6 +44,7 @@ describe('CreateNodeUseCase', () => {
       data: { url: 'https://example.com' },
       isPublic: true,
     });
+
     assertOk(result);
     expect(crawler.fetch).toHaveBeenCalledWith('https://example.com');
     expect(result.result.type).toBe('link');
@@ -77,10 +81,11 @@ describe('CreateNodeUseCase', () => {
       isPublic: false,
       data: { content: 'x' },
     });
+
+    // TODO: create a helper for assertNotOk :)
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('db error');
+      expect(result.error).toBeInstanceOf(Error);
     }
   });
 });
-

@@ -1,4 +1,5 @@
-import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
+import { LinkNode } from '../../domain/link-node.js';
+import type { AnyNode, EdgeType } from '../../domain/types.js';
 import type { FlashcardNode } from '../../domain/flashcard-node.js';
 
 type SearchResult = {
@@ -17,9 +18,10 @@ interface NodeRepository {
     type: EdgeType,
     isBidirectional: boolean
   ): Promise<void>;
+  search(query: string, withRelations?: boolean): Promise<SearchResult[]>;
   findAll(): Promise<AnyNode[]>;
   findById(id: string, withRelations?: boolean): Promise<AnyNode | null>;
-  search(query: string, withRelations?: boolean): Promise<SearchResult[]>;
+  findLinkNodeByUrl(url: string): Promise<LinkNode | undefined>;
   findDueFlashcards(date: Date, limit: number): Promise<FlashcardNode[]>;
 }
 

@@ -3,7 +3,10 @@ import { NodeMapper } from '../../adapters/node-mapper.js';
 import { SqliteNodeRepository } from '../../external/repositories/sqlite-node-repository.js';
 import { CreateNodeUseCase } from './create-node.js';
 import type { Crawler } from '../ports/crawler.js';
-import { createTestDatabase, type TestDatabase } from '../../../test/database.js';
+import {
+  createTestDatabase,
+  type TestDatabase,
+} from '../../../test/database.js';
 import { assertOk } from '../../../test/assert.js';
 
 describe('CreateNodeUseCase (integration)', () => {
@@ -37,6 +40,7 @@ describe('CreateNodeUseCase (integration)', () => {
       isPublic: false,
       data: { content: 'Some content' },
     });
+
     assertOk(result);
 
     const stored = await repository.findById(result.result.id);
@@ -49,6 +53,7 @@ describe('CreateNodeUseCase (integration)', () => {
       isPublic: true,
       data: { url: 'https://example.com' },
     });
+
     assertOk(result);
 
     const stored = await repository.findById(result.result.id);
@@ -60,4 +65,3 @@ describe('CreateNodeUseCase (integration)', () => {
     }
   });
 });
-

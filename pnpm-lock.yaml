@@ -51,6 +51,9 @@ importers:
       '@types/node':
         specifier: 24.2.1
         version: 24.2.1
+      '@types/turndown':
+        specifier: ^5.0.5
+        version: 5.0.5
       drizzle-kit:
         specifier: 0.31.4
         version: 0.31.4
@@ -756,6 +759,9 @@ packages:
 
   '@types/tough-cookie@4.0.5':
     resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
+
+  '@types/turndown@5.0.5':
+    resolution: {integrity: sha512-TL2IgGgc7B5j78rIccBtlYAnkuv8nUQqhQc+DSYV5j9Be9XOcm/SKOVRuA47xAVI3680Tk9B1d8flK2GWT2+4w==}
 
   '@types/wrap-ansi@3.0.0':
     resolution: {integrity: sha512-ltIpx+kM7g/MLRZfkbL7EsCEjfzCcScLpkg37eXEtx5kmrAKBkTJwd1GIAjDSL8wTpM6Hzn5YO4pSb91BEwu1g==}
@@ -2060,6 +2066,8 @@ snapshots:
       undici-types: 7.10.0
 
   '@types/tough-cookie@4.0.5': {}
+
+  '@types/turndown@5.0.5': {}
 
   '@types/wrap-ansi@3.0.0': {}
 

@@ -16,6 +16,7 @@ import type {
 } from '../../application/ports/node-repository.js';
 import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
 import type { FlashcardNode } from '../../domain/flashcard-node.js';
+import type { LinkNode } from '../../domain/link-node.js';
 
 const typeTableLookup: Record<
   NodeType,
@@ -109,7 +110,9 @@ class SqliteNodeRepository implements NodeRepository {
             .where(eq(flashcardNodesTable.nodeId, node.id));
           break;
       }
-      await tx.run(sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`);
+      await tx.run(
+        sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
+      );
       await tx.run(
         sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
       );
@@ -221,6 +224,31 @@ class SqliteNodeRepository implements NodeRepository {
 
     node.setRelatedNodes(relatedMap);
     return node;
+  }
+
+  async findLinkNodeByUrl(url: string): Promise<LinkNode | undefined> {
+    const linkWithNode = await this.db.query.linkNodesTable.findFirst({
+      where: eq(linkNodesTable.url, url),
+      with: {
+        node: true,
+      },
+    });
+
+    if (!linkWithNode) return undefined;
+
+    const node = {
+      ...linkWithNode.node,
+      linkNode: linkWithNode,
+    };
+
+    const domainNode = this.mapper.toDomain(node);
+
+    // TODO: add helpers for this (they exist, so just reuse)
+    if (domainNode.type !== 'link') {
+      throw new Error('Expected link node when querying by URL');
+    }
+
+    return domainNode;
   }
 
   async search(
