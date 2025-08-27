@@ -6,13 +6,12 @@ import { createDatabaseClient } from '../external/database/client.js';
 import { HTMLGenerator } from '../external/publishers/html-generator.js';
 import { SqliteNodeRepository } from '../external/repositories/sqlite-node-repository.js';
 import { CreateNodeUseCase } from './use-cases/create-node.js';
-import { EvaluateFlashcardAnswerUseCase } from './use-cases/evaluate-flashcard-answer.js';
 import { GenerateFlashcardsUseCase } from './use-cases/generate-flashcards.js';
 import { GetDueFlashcardsUseCase } from './use-cases/get-due-flashcards.js';
 import { GetNodeUseCase } from './use-cases/get-node.js';
 import { LinkNodesUseCase } from './use-cases/link-nodes.js';
 import { PublishSiteUseCase } from './use-cases/publish-site.js';
-import { ReviewFlashcardUseCase } from './use-cases/review-flashcard.js';
+import { ReviewFlashcardAnswerUseCase } from './use-cases/review-flashcard-answer.js';
 import { SearchNodesUseCase } from './use-cases/search-nodes.js';
 
 type AppConfig = {
@@ -43,8 +42,8 @@ class ApplicationFactory {
       flashcardGenerator
     );
     const getDueFlashcards = new GetDueFlashcardsUseCase(repository);
-    const reviewFlashcard = new ReviewFlashcardUseCase(repository);
-    const evaluateFlashcardAnswer = new EvaluateFlashcardAnswerUseCase(
+    const reviewFlashcardAnswer = new ReviewFlashcardAnswerUseCase(
+      repository,
       flashcardAnswerGrader
     );
 
@@ -58,8 +57,7 @@ class ApplicationFactory {
       linkNodes,
       generateFlashcards,
       getDueFlashcards,
-      reviewFlashcard,
-      evaluateFlashcardAnswer,
+      reviewFlashcardAnswer,
       publishSite,
     };
   }
