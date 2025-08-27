@@ -2,6 +2,7 @@ import type {
   FlashcardAnswerGrader,
   FlashcardAnswerEvaluation,
 } from '../ports/flashcard-answer-grader.js';
+import { Result } from '../../shared/result.js';
 
 class EvaluateFlashcardAnswerUseCase {
   constructor(private readonly grader: FlashcardAnswerGrader) {}
@@ -10,14 +11,14 @@ class EvaluateFlashcardAnswerUseCase {
     front: string;
     back: string;
     answer: string;
-  }): Promise<
-    { ok: true; result: FlashcardAnswerEvaluation } | { ok: false; error: string }
-  > {
+  }): Promise<Result<FlashcardAnswerEvaluation, Error>> {
     try {
       const evaluation = await this.grader.evaluate(input);
-      return { ok: true, result: evaluation };
+      return Result.success(evaluation);
     } catch (err) {
-      return { ok: false, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

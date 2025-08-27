@@ -24,10 +24,10 @@ class ReviewCommand {
     console.log('\n🔁 Reviewing due flashcards...\n');
     const result = await this.getDueFlashcardsUseCase.execute({ limit: 20 });
     if (!result.ok) {
-      console.error(`❌ Error fetching flashcards: ${result.error}`);
+      console.error(`❌ Error fetching flashcards: ${result.error.message}`);
       return;
     }
-    const cards = result.result;
+    const cards = result.value;
     if (cards.length === 0) {
       console.log('No flashcards are due for review.');
       return;
@@ -46,12 +46,12 @@ class ReviewCommand {
           answer,
         });
         if (evaluation.ok) {
-          const score = evaluation.result.score;
+          const score = evaluation.value.score;
           const label =
             score === 1 ? '✅ Correct' : score === 0.5 ? '⚠️ Partially correct' : '❌ Incorrect';
-          console.log(`${label}: ${evaluation.result.comment}`);
+          console.log(`${label}: ${evaluation.value.comment}`);
         } else {
-          console.error(`  ❌ Failed to grade answer: ${evaluation.error}`);
+          console.error(`  ❌ Failed to grade answer: ${evaluation.error.message}`);
         }
       }
       console.log(`Back: ${card.data.back}`);
@@ -69,7 +69,7 @@ class ReviewCommand {
         quality,
       });
       if (!review.ok) {
-        console.error(`  ❌ Failed to review card: ${review.error}`);
+        console.error(`  ❌ Failed to review card: ${review.error.message}`);
       }
     }
 

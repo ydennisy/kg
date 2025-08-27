@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { SiteGenerator } from '../ports/site-generator.js';
+import { Result } from '../../shared/result.js';
 
 class PublishSiteUseCase {
   constructor(
@@ -10,7 +11,9 @@ class PublishSiteUseCase {
     private outputDir: string = './public'
   ) {}
 
-  async execute() {
+  async execute(): Promise<
+    Result<{ filesGenerated: number; outputDir: string }, Error>
+  > {
     try {
       // Get all nodes and filter for public ones
       const allNodes = await this.repository.findAll();
@@ -41,12 +44,14 @@ class PublishSiteUseCase {
         await fs.writeFile(fullPath, file.content, 'utf8');
       }
 
-      return {
-        ok: true as const,
-        result: { filesGenerated: siteFiles.length, outputDir: this.outputDir },
-      };
+      return Result.success({
+        filesGenerated: siteFiles.length,
+        outputDir: this.outputDir,
+      });
     } catch (err) {
-      return { ok: false as const, error: (err as Error).message };
+      return Result.failure(
+        err instanceof Error ? err : new Error(String(err))
+      );
     }
   }
 }

@@ -32,14 +32,14 @@ describe('GetNodeUseCase (integration)', () => {
 
     const result = await useCase.execute({ id: note.id });
     assertOk(result);
-    expect(result.result.id).toBe(note.id);
+    expect(result.value.id).toBe(note.id);
   });
 
   test('returns error when node does not exist', async () => {
     const result = await useCase.execute({ id: randomUUID() });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('Node not found');
+      expect(result.error.message).toBe('Node not found');
     }
   });
 
@@ -60,6 +60,6 @@ describe('GetNodeUseCase (integration)', () => {
 
     const result = await useCase.execute({ id: parent.id });
     assertOk(result);
-    expect(result.result.relatedNodes).toHaveLength(0);
+    expect(result.value.relatedNodes).toHaveLength(0);
   });
 });

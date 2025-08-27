@@ -38,7 +38,7 @@ describe('SearchNodesUseCase (integration)', () => {
 
     const result = await useCase.execute({ query: 'important' });
     assertOk(result);
-    const hit = first(result.result);
+    const hit = first(result.value);
     expect(hit.node.id).toBe(note.id);
   });
 
@@ -62,8 +62,8 @@ describe('SearchNodesUseCase (integration)', () => {
 
     const result = await useCase.execute({ query: 'computer' });
     assertOk(result);
-    expect(result.result).toHaveLength(2);
-    const types = result.result.map((r) => r.node.type).sort();
+    expect(result.value).toHaveLength(2);
+    const types = result.value.map((r) => r.node.type).sort();
     expect(types).toEqual(['link', 'note']);
   });
 
@@ -84,7 +84,7 @@ describe('SearchNodesUseCase (integration)', () => {
 
     const result = await useCase.execute({ query: 'Parent', withRelations: true });
     assertOk(result);
-    const hit = first(result.result);
+    const hit = first(result.value);
     const related = first(hit.node.relatedNodes);
     expect(related.node.id).toBe(child.id);
   });
@@ -99,6 +99,6 @@ describe('SearchNodesUseCase (integration)', () => {
 
     const result = await useCase.execute({ query: 'unrelated' });
     assertOk(result);
-    expect(result.result).toEqual([]);
+    expect(result.value).toEqual([]);
   });
 });

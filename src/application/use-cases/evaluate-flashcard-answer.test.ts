@@ -29,7 +29,7 @@ describe('EvaluateFlashcardAnswerUseCase', () => {
     const result = await useCase.execute(input);
 
     assertOk(result);
-    expect(result.result).toBe(evaluation);
+    expect(result.value).toBe(evaluation);
     expect(grader.evaluate).toHaveBeenCalledWith(input);
   });
 
@@ -44,7 +44,7 @@ describe('EvaluateFlashcardAnswerUseCase', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('fail');
+      expect(result.error.message).toBe('fail');
     }
   });
 });

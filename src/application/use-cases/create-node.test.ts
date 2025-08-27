@@ -26,8 +26,8 @@ describe('CreateNodeUseCase', () => {
       isPublic: false,
     });
     assertOk(result);
-    expect(result.result.type).toBe('note');
-    expect(repository.save).toHaveBeenCalledWith(result.result);
+    expect(result.value.node.type).toBe('note');
+    expect(repository.save).toHaveBeenCalledWith(result.value.node);
   });
 
   test('creates a link node using crawler data', async () => {
@@ -47,8 +47,8 @@ describe('CreateNodeUseCase', () => {
 
     assertOk(result);
     expect(crawler.fetch).toHaveBeenCalledWith('https://example.com');
-    expect(result.result.type).toBe('link');
-    expect(repository.save).toHaveBeenCalledWith(result.result);
+    expect(result.value.node.type).toBe('link');
+    expect(repository.save).toHaveBeenCalledWith(result.value.node);
   });
 
   test('creates a tag node', async () => {
@@ -58,8 +58,8 @@ describe('CreateNodeUseCase', () => {
       data: { name: 'math', description: 'numbers' },
     });
     assertOk(result);
-    expect(result.result.type).toBe('tag');
-    expect(repository.save).toHaveBeenCalledWith(result.result);
+    expect(result.value.node.type).toBe('tag');
+    expect(repository.save).toHaveBeenCalledWith(result.value.node);
   });
 
   test('creates a flashcard node', async () => {
@@ -69,8 +69,8 @@ describe('CreateNodeUseCase', () => {
       data: { front: '2+2', back: '4' },
     });
     assertOk(result);
-    expect(result.result.type).toBe('flashcard');
-    expect(repository.save).toHaveBeenCalledWith(result.result);
+    expect(result.value.node.type).toBe('flashcard');
+    expect(repository.save).toHaveBeenCalledWith(result.value.node);
   });
 
   test('returns error when repository throws', async () => {

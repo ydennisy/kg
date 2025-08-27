@@ -25,7 +25,7 @@ describe('GetNodeUseCase', () => {
 
     const result = await useCase.execute({ id: note.id });
     assertOk(result);
-    expect(result.result).toBe(note);
+    expect(result.value).toBe(note);
     expect(repository.findById).toHaveBeenCalledWith(note.id, false);
   });
 
@@ -35,7 +35,7 @@ describe('GetNodeUseCase', () => {
     const result = await useCase.execute({ id: 'missing' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('Node not found');
+      expect(result.error.message).toBe('Node not found');
     }
   });
 
@@ -45,7 +45,7 @@ describe('GetNodeUseCase', () => {
     const result = await useCase.execute({ id: 'x' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('db error');
+      expect(result.error.message).toBe('db error');
     }
   });
 });

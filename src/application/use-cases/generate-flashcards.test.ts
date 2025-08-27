@@ -30,7 +30,7 @@ describe('GenerateFlashcardsUseCase', () => {
     const result = await useCase.execute({ id: 'missing' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('Node not found');
+      expect(result.error.message).toBe('Node not found');
     }
   });
 
@@ -48,7 +48,7 @@ describe('GenerateFlashcardsUseCase', () => {
 
     const result = await useCase.execute({ id: note.id });
     assertOk(result);
-    expect(result.result).toEqual(flashcards);
+    expect(result.value).toEqual(flashcards);
     expect(generator.generate).toHaveBeenCalledWith('Test Note | Content');
   });
 
@@ -69,7 +69,7 @@ describe('GenerateFlashcardsUseCase', () => {
 
     const result = await useCase.execute({ id: link.id });
     assertOk(result);
-    expect(result.result).toEqual(flashcards);
+    expect(result.value).toEqual(flashcards);
     expect(generator.generate).toHaveBeenCalledWith('Example | Example text');
   });
 
@@ -83,7 +83,7 @@ describe('GenerateFlashcardsUseCase', () => {
     const result = await useCase.execute({ id: tag.id });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe(
+      expect(result.error.message).toBe(
         'Flashcards can be generated only from `note` or `link` node types'
       );
     }
@@ -95,7 +95,7 @@ describe('GenerateFlashcardsUseCase', () => {
     const result = await useCase.execute({ id: 'id' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('db error');
+      expect(result.error.message).toBe('db error');
     }
   });
 });

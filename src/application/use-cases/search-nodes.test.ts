@@ -18,7 +18,7 @@ describe('SearchNodesUseCase', () => {
   test('returns empty results for blank query without calling repository', async () => {
     const result = await useCase.execute({ query: '   ' });
     assertOk(result);
-    expect(result.result).toEqual([]);
+    expect(result.value).toEqual([]);
     expect(repository.search).not.toHaveBeenCalled();
   });
 
@@ -35,7 +35,7 @@ describe('SearchNodesUseCase', () => {
 
     const result = await useCase.execute({ query: 'content' });
     assertOk(result);
-    expect(result.result).toEqual(mockResults);
+    expect(result.value).toEqual(mockResults);
     expect(repository.search).toHaveBeenCalledWith('content', undefined);
   });
 
@@ -53,7 +53,7 @@ describe('SearchNodesUseCase', () => {
     const result = await useCase.execute({ query: 'test' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('db error');
+      expect(result.error.message).toBe('db error');
     }
   });
 });
