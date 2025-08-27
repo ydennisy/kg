@@ -5,22 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1756049817351,
+      "when": 1756300668422,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1756049895645,
+      "when": 1756300670604,
       "tag": "0001_add_fts_to_nodes",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1756037834635,
-      "tag": "0002_add_flashcard_review",
       "breakpoints": true
     }
   ]

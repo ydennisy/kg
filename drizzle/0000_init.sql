@@ -16,6 +16,11 @@ CREATE TABLE `flashcard_nodes` (
 	`node_id` text PRIMARY KEY NOT NULL,
 	`front` text NOT NULL,
 	`back` text NOT NULL,
+	`due_at` text NOT NULL,
+	`interval` integer NOT NULL,
+	`ease_factor` real NOT NULL,
+	`repetitions` integer NOT NULL,
+	`last_reviewed_at` text,
 	FOREIGN KEY (`node_id`) REFERENCES `nodes`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint

@@ -70,7 +70,13 @@ class CreateCommand {
       });
 
       if (result && result.ok) {
-        console.log(`✅ Created ${nodeType} node with ID: ${result.result.id}`);
+        console.log(
+          `✅ Created ${nodeType} node with ID: ${result.result.node.id}`
+        );
+
+        if (result.result.warning) {
+          console.warn(`⚠️  ${result.result.warning}`);
+        }
 
         const shouldLink = await confirm({
           message: 'Would you like to link this node to existing nodes?',
@@ -78,7 +84,7 @@ class CreateCommand {
         });
 
         if (shouldLink) {
-          await this.linkNode(result.result.id);
+          await this.linkNode(result.result.node.id);
         }
       } else {
         console.error(`❌ Error creating node: ${result.error}`);

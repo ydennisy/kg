@@ -1,6 +1,6 @@
 {
-  "id": "ec3ba0e5-9193-467e-a83e-48b6d75ecd52",
-  "prevId": "3e480314-a470-4415-946c-04d1a494ae75",
+  "id": "9be25ace-b211-49c5-8697-bb21b0720d38",
+  "prevId": "c0b9aa6f-6ae8-4998-99ef-2f3b3effee60",
   "version": "6",
   "dialect": "sqlite",
   "tables": {
@@ -129,6 +129,41 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "due_at": {
+          "name": "due_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "interval": {
+          "name": "interval",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ease_factor": {
+          "name": "ease_factor",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repetitions": {
+          "name": "repetitions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_reviewed_at": {
+          "name": "last_reviewed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },

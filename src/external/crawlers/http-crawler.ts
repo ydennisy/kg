@@ -14,28 +14,33 @@ class HTTPCrawler implements Crawler {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to crawl website');
+      throw new Error(`Failed to fetch (${response.status})`);
     }
 
     const html = await response.text();
-    const doc = new JSDOM(html, {
-      url,
-    });
+    const doc = new JSDOM(html, { url });
     const reader = new Readability(doc.window.document);
     const parsed = reader.parse();
 
-    if (!parsed) {
-      throw new Error('Failed to parse website');
-    }
+    const title =
+      parsed?.title ??
+      doc.window.document.querySelector('title')?.textContent ??
+      undefined;
+
+    const contentHtml = parsed?.content ?? undefined;
+    const text =
+      parsed?.textContent ?? doc.window.document.body?.textContent ?? undefined;
+
+    const markdown = contentHtml
+      ? this.formatAsMarkdown(contentHtml)
+      : undefined;
 
     return {
       url,
-      title: parsed.title ?? undefined,
-      html: parsed.content ?? undefined,
-      text: parsed.textContent ?? undefined,
-      markdown: parsed.content
-        ? this.formatAsMarkdown(parsed.content)
-        : undefined,
+      title,
+      html: contentHtml,
+      text,
+      markdown,
     };
   }
 
