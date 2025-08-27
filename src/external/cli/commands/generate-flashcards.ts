@@ -114,20 +114,25 @@ class GenerateFlashcardsCommand {
       console.clear();
       console.log(`\n📚 Card ${currentIndex + 1} of ${flashcards.length}`);
       console.log('─'.repeat(50));
-      console.log('\n🎯 FRONT:');
+      console.log('');
+      console.log('🎯 FRONT:');
       console.log(`   ${card.front}`);
-      console.log('\n💡 BACK:');
+      console.log('');
+      console.log('💡 BACK:');
       console.log(`   ${card.back}`);
       console.log('');
 
+      console.log('');
       const action = await select({
         message: 'What would you like to do with this card?',
         choices: [
+          { name: 'Card decisions', value: 'card-decisions', disabled: true },
           { name: '✅ Keep this card', value: 'keep' },
           { name: '❌ Discard this card', value: 'discard' },
+          { name: '📝 Edit and keep', value: 'edit' },
+          { name: 'Navigation', value: 'navigation', disabled: true },
           { name: '⏮️ Previous card', value: 'previous' },
           { name: '⏭️ Skip to next', value: 'next' },
-          { name: '📝 Edit and keep', value: 'edit' },
           { name: '🚪 Finish review', value: 'quit' },
         ],
       });
