@@ -74,7 +74,7 @@ class GenerateFlashcardsCommand {
         isPublic: makePublic,
       });
       if (saveResult.ok) {
-        createdIds.push(saveResult.result.id);
+        createdIds.push(saveResult.result.node.id);
       } else {
         console.error(`  ❌ Failed to save a flashcard: ${saveResult.error}`);
       }
