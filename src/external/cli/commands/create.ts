@@ -60,7 +60,7 @@ class CreateCommand {
       const inputData = await this.collectNodeInput(nodeType);
 
       const isPublic = await confirm({
-        message: 'Make this node public (default: No)?',
+        message: 'Make this node public? (y/N)',
         default: false,
       });
 
@@ -70,21 +70,24 @@ class CreateCommand {
       });
 
       if (result && result.ok) {
-        console.log(
-          `✅ Created ${nodeType} node with ID: ${result.value.node.id}`
-        );
-
-        if (result.value.warning) {
-          console.warn(`⚠️  ${result.value.warning}`);
+        const { node, warning } = result.value;
+        console.log('✅ Created node:');
+        console.log(`  Type: ${node.type}`);
+        console.log(`  Title: ${node.title}`);
+        console.log(`  ID: ${node.id}`);
+        if (warning) {
+          console.warn(`⚠️  ${warning}`);
         }
 
+        console.log();
+
         const shouldLink = await confirm({
-          message: 'Would you like to link this node to existing nodes?',
+          message: 'Would you like to link this node to existing nodes? (y/N)',
           default: false,
         });
 
         if (shouldLink) {
-          await this.linkNode(result.value.node.id);
+          await this.linkNode(node.id);
         }
       } else {
         console.error(`❌ Error creating node: ${result.error.message}`);
@@ -195,7 +198,7 @@ class CreateCommand {
         console.log(`✅ Added node ${nodeId} to link list`);
 
         const addMore = await confirm({
-          message: 'Add another link?',
+          message: 'Add another link? (Y/n)',
           default: true,
         });
         if (!addMore) {
