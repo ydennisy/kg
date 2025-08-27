@@ -34,6 +34,7 @@ class ReviewCommand {
     for (const [i, card] of cards.entries()) {
       console.log(`\n📚 Card ${i + 1} of ${cards.length}`);
       console.log(`Front: ${card.data.front}`);
+      console.log();
       const answer = await input({
         message: 'Type your answer:',
       });
@@ -53,7 +54,10 @@ class ReviewCommand {
       } else {
         console.error(`  ❌ Failed to review card: ${review.error.message}`);
       }
+      console.log();
+      console.log('─'.repeat(50));
       console.log(`Back: ${card.data.back}`);
+      console.log();
     }
 
     console.log('\n✅ Review session complete');
