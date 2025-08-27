@@ -88,4 +88,19 @@ describe('CreateNodeUseCase', () => {
       expect(result.error).toBeInstanceOf(Error);
     }
   });
+
+  test('returns error when crawler fetch fails', async () => {
+    vi.mocked(crawler.fetch).mockRejectedValue(new Error('fetch fail'));
+
+    const result = await useCase.execute({
+      type: 'link',
+      data: { url: 'https://example.com' },
+      isPublic: true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toBe('fetch fail');
+    }
+  });
 });
