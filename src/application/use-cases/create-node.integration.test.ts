@@ -64,4 +64,34 @@ describe('CreateNodeUseCase (integration)', () => {
       throw new Error('expected link node');
     }
   });
+
+  test('persists a tag node', async () => {
+    const input = {
+      type: 'tag',
+      isPublic: false,
+      data: { name: 'integration-tag', description: 'test tag' },
+    };
+
+    const result = await useCase.execute(input);
+
+    assertOk(result);
+
+    const stored = await repository.findById(result.value.node.id);
+    expect(stored).toStrictEqual(result.value.node);
+  });
+
+  test('persists a flashcard node', async () => {
+    const input = {
+      type: 'flashcard',
+      isPublic: true,
+      data: { front: 'front', back: 'back' },
+    };
+
+    const result = await useCase.execute(input);
+
+    assertOk(result);
+
+    const stored = await repository.findById(result.value.node.id);
+    expect(stored).toStrictEqual(result.value.node);
+  });
 });
