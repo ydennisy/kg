@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { eq, or, inArray, sql, lte, asc } from 'drizzle-orm';
+import { DrizzleQueryError } from 'drizzle-orm/errors';
+import { LibsqlError } from '@libsql/client';
+import { Result } from '../../shared/result.js';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import {
   nodesTable,
@@ -9,6 +12,7 @@ import {
   flashcardNodesTable,
   edgesTable,
 } from '../database/schema.js';
+import { RepositoryErrorTranslator } from './errors.js';
 import type { DatabaseClient } from '../database/client.js';
 import type {
   NodeRepository,
@@ -16,6 +20,8 @@ import type {
 } from '../../application/ports/node-repository.js';
 import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
 import type { FlashcardNode } from '../../domain/flashcard-node.js';
+import type { DomainError } from '../../domain/errors/base-error.js';
+import { DuplicateUrlError } from '../../domain/errors/node-errors.js';
 
 const typeTableLookup: Record<
   NodeType,
@@ -36,19 +42,27 @@ class SqliteNodeRepository implements NodeRepository {
     private mapper: NodeMapper
   ) {}
 
-  async save(node: AnyNode): Promise<void> {
+  async save(node: AnyNode): Promise<Result<undefined, Error>> {
     const bundle = this.mapper.toRecords(node);
 
-    await this.db.transaction(async (tx) => {
-      await tx.insert(nodesTable).values(bundle.nodeRecord);
-      await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
-      await tx.run(
-        sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
-      );
-      await tx.run(
-        sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
-      );
-    });
+    try {
+      await this.db.transaction(async (tx) => {
+        await tx.insert(nodesTable).values(bundle.nodeRecord);
+        await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
+        await tx.run(
+          sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
+        );
+        await tx.run(
+          sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
+        );
+      });
+      return Result.success(undefined);
+    } catch (err) {
+      if (err instanceof DrizzleQueryError) {
+        return Result.failure(new DuplicateUrlError('url'));
+      }
+      return Result.failure(new Error('unknown repository error'));
+    }
   }
 
   async update(node: AnyNode): Promise<void> {
@@ -109,7 +123,9 @@ class SqliteNodeRepository implements NodeRepository {
             .where(eq(flashcardNodesTable.nodeId, node.id));
           break;
       }
-      await tx.run(sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`);
+      await tx.run(
+        sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
+      );
       await tx.run(
         sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
       );

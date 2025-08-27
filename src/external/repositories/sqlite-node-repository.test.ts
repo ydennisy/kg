@@ -7,6 +7,7 @@ import {
   createTestDatabase,
   type TestDatabase,
 } from '../../../test/database.js';
+import { LinkNode } from '../../domain/link-node.js';
 
 const nodes = [
   {
@@ -52,27 +53,6 @@ describe('SqliteNodeRepository', () => {
 
     await expect(repository.save(node)).resolves.not.toThrow();
   });
-
-  // test('node (with edges) is saved', async () => {
-  //   // First create & save the target node
-  //   const targetNode = factory.createNode(
-  //     nodes[1]!.type,
-  //     nodes[1]!.title,
-  //     nodes[1]!.isPublic,
-  //     nodes[1]!.data
-  //   );
-  //   await repository.save(targetNode);
-
-  //   const node = factory.createNode(
-  //     nodes[0]!.type,
-  //     nodes[0]!.title,
-  //     nodes[0]!.isPublic,
-  //     nodes[0]!.data
-  //   );
-  //   node.createEdge(targetNode.id);
-
-  //   await expect(repository.save(node)).resolves.not.toThrow();
-  // });
 
   test('node is retrieved by ID', async () => {
     const node = NoteNode.create({
@@ -267,5 +247,17 @@ describe('SqliteNodeRepository', () => {
       type: 'contains',
       direction: 'to',
     });
+  });
+
+  test('dupe urls', async () => {
+    const node = LinkNode.create({
+      isPublic: false,
+      data: {
+        url: 'https://example.com',
+        crawled: { title: undefined, text: undefined, html: undefined },
+      },
+    });
+    await repository.save(node);
+    await repository.save(node);
   });
 });
