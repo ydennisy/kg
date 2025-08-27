@@ -28,6 +28,7 @@ describe('CreateNodeUseCase', () => {
     assertOk(result);
     expect(result.value.node.type).toBe('note');
     expect(repository.save).toHaveBeenCalledWith(result.value.node);
+    expect(crawler.fetch).not.toHaveBeenCalled();
   });
 
   test('creates a link node using crawler data', async () => {
@@ -60,6 +61,7 @@ describe('CreateNodeUseCase', () => {
     assertOk(result);
     expect(result.value.node.type).toBe('tag');
     expect(repository.save).toHaveBeenCalledWith(result.value.node);
+    expect(crawler.fetch).not.toHaveBeenCalled();
   });
 
   test('creates a flashcard node', async () => {
@@ -71,6 +73,7 @@ describe('CreateNodeUseCase', () => {
     assertOk(result);
     expect(result.value.node.type).toBe('flashcard');
     expect(repository.save).toHaveBeenCalledWith(result.value.node);
+    expect(crawler.fetch).not.toHaveBeenCalled();
   });
 
   test('returns error when repository throws', async () => {
