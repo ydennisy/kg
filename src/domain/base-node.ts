@@ -1,5 +1,13 @@
 import type { AnyNode, NodeType, EdgeType } from './types.js';
 
+interface BaseNodeProps {
+  id: string;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+  isPublic: boolean;
+}
+
 /**
  * Base class for all node types in the knowledge graph.
  */
@@ -43,13 +51,7 @@ abstract class BaseNode {
     return Array.from(this._relatedNodes.values());
   }
 
-  constructor(props: {
-    id: string;
-    version: number;
-    createdAt: Date;
-    updatedAt: Date;
-    isPublic: boolean;
-  }) {
+  constructor(props: BaseNodeProps) {
     this.id = props.id;
     this.version = props.version;
     this.createdAt = props.createdAt;
@@ -63,3 +65,4 @@ abstract class BaseNode {
 }
 
 export { BaseNode };
+export type { BaseNodeProps };

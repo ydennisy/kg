@@ -1,16 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { BaseNode } from './base-node.js';
+import { BaseNode, type BaseNodeProps } from './base-node.js';
 
 type NoteNodeData = {
   content: string;
 };
 
-interface NoteNodeProps {
-  id: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isPublic: boolean;
+interface NoteNodeProps extends BaseNodeProps {
   title: string;
   data: NoteNodeData;
 }

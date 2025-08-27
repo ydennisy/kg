@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BaseNode } from './base-node.js';
+import { BaseNode, type BaseNodeProps } from './base-node.js';
 
 type LinkNodeData = {
   url: string;
@@ -10,12 +10,7 @@ type LinkNodeData = {
   };
 };
 
-interface LinkNodeProps {
-  id: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isPublic: boolean;
+interface LinkNodeProps extends BaseNodeProps {
   title: string | undefined;
   data: LinkNodeData;
 }
@@ -45,11 +40,7 @@ class LinkNode extends BaseNode {
   }
 
   get searchableContent() {
-    return [
-      this.data.url,
-      this.data.crawled.title,
-      this.data.crawled.text,
-    ]
+    return [this.data.url, this.data.crawled.title, this.data.crawled.text]
       .filter(Boolean)
       .join(' ');
   }

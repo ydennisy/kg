@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BaseNode } from './base-node.js';
+import { BaseNode, type BaseNodeProps } from './base-node.js';
 
 /**
  * Spaced repetition metadata stored alongside the flashcard text.
@@ -29,12 +29,7 @@ type FlashcardNodeData = {
   lastReviewedAt: Date | null;
 };
 
-interface FlashcardNodeProps {
-  id: string;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isPublic: boolean;
+interface FlashcardNodeProps extends BaseNodeProps {
   data: FlashcardNodeData;
 }
 
