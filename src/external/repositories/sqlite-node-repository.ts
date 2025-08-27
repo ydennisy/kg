@@ -1,8 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { eq, or, inArray, sql, lte, asc } from 'drizzle-orm';
-import { DrizzleQueryError } from 'drizzle-orm/errors';
-import { LibsqlError } from '@libsql/client';
-import { Result } from '../../shared/result.js';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import {
   nodesTable,
@@ -12,7 +9,6 @@ import {
   flashcardNodesTable,
   edgesTable,
 } from '../database/schema.js';
-import { RepositoryErrorTranslator } from './errors.js';
 import type { DatabaseClient } from '../database/client.js';
 import type {
   NodeRepository,
@@ -20,8 +16,7 @@ import type {
 } from '../../application/ports/node-repository.js';
 import type { AnyNode, NodeType, EdgeType } from '../../domain/types.js';
 import type { FlashcardNode } from '../../domain/flashcard-node.js';
-import type { DomainError } from '../../domain/errors/base-error.js';
-import { DuplicateUrlError } from '../../domain/errors/node-errors.js';
+import type { LinkNode } from '../../domain/link-node.js';
 
 const typeTableLookup: Record<
   NodeType,
@@ -42,27 +37,19 @@ class SqliteNodeRepository implements NodeRepository {
     private mapper: NodeMapper
   ) {}
 
-  async save(node: AnyNode): Promise<Result<undefined, Error>> {
+  async save(node: AnyNode): Promise<void> {
     const bundle = this.mapper.toRecords(node);
 
-    try {
-      await this.db.transaction(async (tx) => {
-        await tx.insert(nodesTable).values(bundle.nodeRecord);
-        await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
-        await tx.run(
-          sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
-        );
-        await tx.run(
-          sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
-        );
-      });
-      return Result.success(undefined);
-    } catch (err) {
-      if (err instanceof DrizzleQueryError) {
-        return Result.failure(new DuplicateUrlError('url'));
-      }
-      return Result.failure(new Error('unknown repository error'));
-    }
+    await this.db.transaction(async (tx) => {
+      await tx.insert(nodesTable).values(bundle.nodeRecord);
+      await tx.insert(typeTableLookup[bundle.type]).values(bundle.typeRecord);
+      await tx.run(
+        sql`DELETE FROM nodes_fts WHERE id = ${bundle.nodeRecord.id}`
+      );
+      await tx.run(
+        sql`INSERT INTO nodes_fts(id, title, searchable_content, type) VALUES (${bundle.nodeRecord.id}, ${bundle.nodeRecord.title}, ${node.searchableContent}, ${bundle.nodeRecord.type})`
+      );
+    });
   }
 
   async update(node: AnyNode): Promise<void> {
@@ -237,6 +224,31 @@ class SqliteNodeRepository implements NodeRepository {
 
     node.setRelatedNodes(relatedMap);
     return node;
+  }
+
+  async findLinkNodeByUrl(url: string): Promise<LinkNode | undefined> {
+    const linkWithNode = await this.db.query.linkNodesTable.findFirst({
+      where: eq(linkNodesTable.url, url),
+      with: {
+        node: true,
+      },
+    });
+
+    if (!linkWithNode) return undefined;
+
+    const node = {
+      ...linkWithNode.node,
+      linkNode: linkWithNode,
+    };
+
+    const domainNode = this.mapper.toDomain(node);
+
+    // TODO: add helpers for this (they exist, so just reuse)
+    if (domainNode.type !== 'link') {
+      throw new Error('Expected link node when querying by URL');
+    }
+
+    return domainNode;
   }
 
   async search(

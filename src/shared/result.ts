@@ -29,4 +29,3 @@ const Result = {
 };
 
 export { Result };
-/// export type { Result };

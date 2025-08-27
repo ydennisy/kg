@@ -1,10 +1,11 @@
 import { expect } from 'vitest';
+import { Result } from '../src/shared/result';
 
 function assertOk<T>(
-  result: { ok: true; result: T } | { ok: false; error: string }
+  result: Result<T, Error>
 ): asserts result is { ok: true; result: T } {
   expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) throw new Error(result.error.message);
 }
 
 export { assertOk };

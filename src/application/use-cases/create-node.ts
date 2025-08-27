@@ -5,6 +5,7 @@ import { TagNode } from '../../domain/tag-node.js';
 import type { NodeRepository } from '../ports/node-repository.js';
 import type { AnyNode } from '../../domain/types.js';
 import type { Crawler } from '../ports/crawler.js';
+import { Result } from '../../shared/result.js';
 
 type CreateNodeInput =
   | {
@@ -36,7 +37,7 @@ class CreateNodeUseCase {
     private readonly crawler: Crawler
   ) {}
 
-  async execute(input: CreateNodeInput) {
+  async execute(input: CreateNodeInput): Promise<Result<AnyNode, Error>> {
     try {
       let node: AnyNode;
 
@@ -49,6 +50,12 @@ class CreateNodeUseCase {
 
         case 'link':
           const { url } = data;
+          const exists = await this.repository.findLinkNodeByUrl(url);
+          if (exists) {
+            return Result.failure(
+              new Error(`A link node with URL: ${url} already exists`)
+            );
+          }
           const crawled = await this.crawler.fetch(url);
           node = LinkNode.create({
             isPublic,
@@ -77,9 +84,12 @@ class CreateNodeUseCase {
       }
 
       await this.repository.save(node);
-      return { ok: true as const, result: node };
+      return Result.success(node);
     } catch (err) {
-      return { ok: false as const, error: (err as Error).message };
+      console.error(err);
+      return Result.failure(
+        new Error('Unknown error whilst creating a new node')
+      );
     }
   }
 }
