@@ -28,7 +28,7 @@ describe('LinkNodesUseCase', () => {
         if (id === target.id) return target;
         return null;
       }),
-      findLinkNodeByUrl: vi.fn(async (url: string) => undefined),
+      findLinkNodeByUrl: vi.fn(async () => undefined),
       search: vi.fn(async () => []),
       findDueFlashcards: vi.fn(async () => []),
     };
@@ -67,7 +67,7 @@ describe('LinkNodesUseCase', () => {
         if (id === card.id) return card;
         return null;
       }),
-      findLinkNodeByUrl: vi.fn(async (url: string) => undefined),
+      findLinkNodeByUrl: vi.fn(async () => undefined),
       findDueFlashcards: vi.fn(async () => []),
     };
 
@@ -80,5 +80,88 @@ describe('LinkNodesUseCase', () => {
       'derived_from',
       false
     );
+  });
+
+  test('forwards provided parameters', async () => {
+    const source = NoteNode.create({
+      title: 'S',
+      isPublic: false,
+      data: { content: 's' },
+    });
+    const target = NoteNode.create({
+      title: 'T',
+      isPublic: false,
+      data: { content: 't' },
+    });
+
+    const repository: NodeRepository = {
+      save: vi.fn(async () => {}),
+      update: vi.fn(async () => {}),
+      delete: vi.fn(async () => {}),
+      link: vi.fn(async () => {}),
+      findAll: vi.fn(async () => []),
+      findById: vi.fn(async (id: string) => {
+        if (id === source.id) return source;
+        if (id === target.id) return target;
+        return null;
+      }),
+      findLinkNodeByUrl: vi.fn(async () => undefined),
+      search: vi.fn(async () => []),
+      findDueFlashcards: vi.fn(async () => []),
+    };
+
+    const useCase = new LinkNodesUseCase(repository);
+    await useCase.execute({
+      fromId: source.id,
+      toId: target.id,
+      type: 'references',
+      isBidirectional: true,
+    });
+
+    expect(repository.link).toHaveBeenCalledWith(
+      source.id,
+      target.id,
+      'references',
+      true
+    );
+  });
+
+  test('returns failure when repository.link throws', async () => {
+    const source = NoteNode.create({
+      title: 'A',
+      isPublic: false,
+      data: { content: 'a' },
+    });
+    const target = NoteNode.create({
+      title: 'B',
+      isPublic: false,
+      data: { content: 'b' },
+    });
+
+    const repository: NodeRepository = {
+      save: vi.fn(async () => {}),
+      update: vi.fn(async () => {}),
+      delete: vi.fn(async () => {}),
+      link: vi.fn(async () => {
+        throw new Error('fail');
+      }),
+      findAll: vi.fn(async () => []),
+      findById: vi.fn(async (id: string) => {
+        if (id === source.id) return source;
+        if (id === target.id) return target;
+        return null;
+      }),
+      findLinkNodeByUrl: vi.fn(async () => undefined),
+      search: vi.fn(async () => []),
+      findDueFlashcards: vi.fn(async () => []),
+    };
+
+    const useCase = new LinkNodesUseCase(repository);
+    const result = await useCase.execute({ fromId: source.id, toId: target.id });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.message).toBe('fail');
+    }
   });
 });
