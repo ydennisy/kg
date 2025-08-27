@@ -88,8 +88,6 @@ class GenerateFlashcardsCommand {
       const linkRes = await this.linkNodesUseCase.execute({
         fromId: nodeId,
         toId: id,
-        type: 'related_to',
-        isBidirectional: true,
       });
       if (!linkRes.ok) {
         console.error(`  ❌ Failed to link ${id}: ${linkRes.error.message}`);

@@ -2,6 +2,7 @@ import { describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { NodeMapper } from '../../adapters/node-mapper.js';
 import { NoteNode } from '../../domain/note-node.js';
+import { FlashcardNode } from '../../domain/flashcard-node.js';
 import { SqliteNodeRepository } from './sqlite-node-repository.js';
 import {
   createTestDatabase,
@@ -249,15 +250,37 @@ describe('SqliteNodeRepository', () => {
     });
   });
 
-  // test('dupe urls', async () => {
-  //   const node = LinkNode.create({
-  //     isPublic: false,
-  //     data: {
-  //       url: 'https://example.com',
-  //       crawled: { title: undefined, text: undefined, html: undefined },
-  //     },
-  //   });
-  //   await repository.save(node);
-  //   await repository.save(node);
-  // });
+  test('flashcard derived_from relationships are unidirectional', async () => {
+    const source = NoteNode.create({
+      title: 'Source',
+      isPublic: false,
+      data: { content: 'Source node' },
+    });
+    const card = FlashcardNode.create({
+      isPublic: false,
+      data: { front: 'Front', back: 'Back' },
+    });
+
+    await repository.save(source);
+    await repository.save(card);
+
+    await repository.link(card.id, source.id, 'derived_from', false);
+
+    const retrievedCard = await repository.findById(card.id, true);
+    const retrievedSource = await repository.findById(source.id, true);
+
+    expect(retrievedCard?.relatedNodes).toHaveLength(1);
+    expect(retrievedCard?.relatedNodes[0]?.node.id).toBe(source.id);
+    expect(retrievedCard?.relatedNodes[0]?.relationship).toEqual({
+      type: 'derived_from',
+      direction: 'from',
+    });
+
+    expect(retrievedSource?.relatedNodes).toHaveLength(1);
+    expect(retrievedSource?.relatedNodes[0]?.node.id).toBe(card.id);
+    expect(retrievedSource?.relatedNodes[0]?.relationship).toEqual({
+      type: 'derived_from',
+      direction: 'to',
+    });
+  });
 });
