@@ -1,5 +1,7 @@
 # `kg`: Knowledge Graph One
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ydennisy/kg)
+
 `kg` is a knowledge management application, designed to help:
 
 - archive and save information such as links
