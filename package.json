@@ -42,7 +42,7 @@
     "@inquirer/prompts": "7.8.4",
     "@libsql/client": "0.15.12",
     "@mozilla/readability": "0.6.0",
-    "ajv": "8.17.1",
+    "ajv": "8.18.0",
     "commander": "14.0.0",
     "drizzle-orm": "0.44.5",
     "inquirer-autocomplete-standalone": "0.8.1",
