@@ -1,0 +1,5 @@
+.next/
+drizzle/
+pnpm-lock.yaml
+*.db
+AGENTS.md

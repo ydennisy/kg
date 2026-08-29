@@ -30,8 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files. .env.development and .env.production are committed on purpose:
+# they hold no secrets, only which database each environment talks to. Secrets
+# and personal overrides belong in the *.local variants, which stay ignored.
 .env*
+!.env.example
+!.env.development
+!.env.production
 
 # vercel
 .vercel
@@ -39,3 +44,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# databases and their backups — never committed, never in a diff
+/data/*
+!/data/.gitkeep
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
