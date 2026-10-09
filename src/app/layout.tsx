@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+// KaTeX ships its own stylesheet and its layout depends on it entirely;
+// rendered math is unreadable without it.
+import 'katex/dist/katex.min.css';
 import './globals.css';
 
 const geistSans = Geist({

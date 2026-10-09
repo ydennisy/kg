@@ -22,6 +22,38 @@ starts empty: every card in it got there by being typed into the app.
 
 Once built, `pnpm start` reboots the production server without rebuilding.
 
+## What a card can hold
+
+Card text is markdown, with math and syntax-highlighted code. You write it in an
+editor that formats as you type — `# ` opens a heading, `- ` a list, ` ``` ` a
+code block, `$x^2$` inline math, `$$…$$` on its own line display math. There is
+no toolbar and nothing to click; the markers are consumed as you type them.
+
+What gets stored is still markdown. The rich text is only how editing feels, so
+a card stays greppable, portable, and readable straight out of SQLite:
+
+```
+$ sqlite3 data/prod.db "select front from cards limit 1"
+# hello
+```
+
+Reading and writing deliberately use different machinery pointed at the same
+format. The editor is [Tiptap](https://tiptap.dev) and runs in the browser; the
+drill and deck pages render markdown to HTML on the server, so **the drill page
+ships none of the editor**. Both sides highlight code with the same highlight.js
+grammars and set math with the same KaTeX, so a card looks the same being
+written as it does being reviewed.
+
+Untrusted-input handling lives in `src/lib/markdown.ts`: content is sanitized
+_before_ KaTeX and the highlighter run, so their generated markup never has to
+be waved through a sanitizer, and KaTeX runs with `trust: false` so `\href` and
+friends cannot emit links. `__tests__/markdown.test.ts` holds it to that.
+
+Cards are editable from the deck list and from the pencil in the top corner of a
+card mid-drill; editing returns you to whichever you came from. Editing sets
+`cards.updated_at` and deliberately leaves the scheduling alone — fixing a typo
+is not a review.
+
 ## The two databases
 
 Both are plain SQLite files under `data/`, spoken to through the same libSQL

@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { DrillCard } from '@/components/drill-card';
+import { Markdown } from '@/components/markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatAbsolute, formatRelative } from '@/lib/date';
@@ -27,6 +28,7 @@ export default async function DrillPage({ searchParams }: PageProps<'/drill'>) {
   const [next] = await db
     .select({
       id: cards.id,
+      deckId: cards.deckId,
       front: cards.front,
       back: cards.back,
       deck: decks.name,
@@ -54,6 +56,17 @@ export default async function DrillPage({ searchParams }: PageProps<'/drill'>) {
 
   const backHref = deckId ? `/decks/${deckId}` : '/';
 
+  // Editing mid-drill should drop you back into the same drill, all-mode and
+  // deck filter intact, rather than at the top of the deck.
+  const drillParams = new URLSearchParams();
+  if (deckId) {
+    drillParams.set('deck', String(deckId));
+  }
+  if (sessionStart) {
+    drillParams.set('all', String(all));
+  }
+  const drillHref = `/drill${drillParams.size ? `?${drillParams}` : ''}`;
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
       <header className="flex items-center justify-between">
@@ -77,8 +90,9 @@ export default async function DrillPage({ searchParams }: PageProps<'/drill'>) {
           key={next.id}
           cardId={next.id}
           deck={next.deck}
-          front={next.front}
-          back={next.back}
+          front={<Markdown>{next.front}</Markdown>}
+          back={<Markdown>{next.back}</Markdown>}
+          editHref={`/decks/${next.deckId}/cards/${next.id}/edit?from=${encodeURIComponent(drillHref)}`}
         />
       ) : (
         <Card>

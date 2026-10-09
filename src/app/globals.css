@@ -128,3 +128,120 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Card content — the shared look for markdown, whether it is being written in
+ * the editor or read while drilling. Both use `.card-prose`, so a card cannot
+ * look like one thing as you type it and another as you review it.
+ */
+@layer components {
+  .card-prose > :first-child {
+    margin-top: 0;
+  }
+  .card-prose > :last-child {
+    margin-bottom: 0;
+  }
+
+  .card-prose h1,
+  .card-prose h2,
+  .card-prose h3 {
+    @apply mt-4 mb-2 font-semibold tracking-tight;
+  }
+  .card-prose h1 {
+    @apply text-xl;
+  }
+  .card-prose h2 {
+    @apply text-lg;
+  }
+  .card-prose h3 {
+    @apply text-base;
+  }
+
+  .card-prose p,
+  .card-prose ul,
+  .card-prose ol,
+  .card-prose blockquote,
+  .card-prose pre,
+  .card-prose table {
+    @apply my-2;
+  }
+
+  .card-prose ul {
+    @apply list-disc pl-5;
+  }
+  .card-prose ol {
+    @apply list-decimal pl-5;
+  }
+  .card-prose li {
+    @apply my-0.5;
+  }
+
+  .card-prose a {
+    @apply underline underline-offset-2;
+  }
+  .card-prose blockquote {
+    @apply border-l-2 border-border pl-3 text-muted-foreground;
+  }
+  .card-prose hr {
+    @apply my-4 border-t border-border;
+  }
+
+  .card-prose code {
+    @apply rounded border border-border bg-muted px-1 py-0.5 font-mono text-[0.9em];
+  }
+  .card-prose pre {
+    @apply overflow-x-auto rounded-lg border border-border bg-muted p-3;
+  }
+  /* The <code> inside a fence should not repeat the inline chip styling. */
+  .card-prose pre code {
+    @apply border-0 bg-transparent p-0 text-sm;
+  }
+
+  .card-prose table {
+    @apply w-full border-collapse text-left;
+  }
+  .card-prose th,
+  .card-prose td {
+    @apply border border-border px-2 py-1;
+  }
+
+  /* Block math should scroll rather than widen the card. */
+  .card-prose .katex-display {
+    @apply overflow-x-auto overflow-y-hidden py-1;
+  }
+
+  /*
+   * Syntax highlighting, drawn from the app's own palette rather than an
+   * imported theme, so code sits in the page instead of on top of it. The
+   * class names are highlight.js's, which both lowlight (the editor) and
+   * rehype-highlight (the reader) emit.
+   */
+  .card-prose .hljs-comment,
+  .card-prose .hljs-quote {
+    @apply text-muted-foreground italic;
+  }
+  .card-prose .hljs-keyword,
+  .card-prose .hljs-selector-tag,
+  .card-prose .hljs-literal,
+  .card-prose .hljs-built_in {
+    @apply font-semibold text-foreground;
+  }
+  .card-prose .hljs-string,
+  .card-prose .hljs-title,
+  .card-prose .hljs-name,
+  .card-prose .hljs-attr,
+  .card-prose .hljs-number,
+  .card-prose .hljs-symbol {
+    @apply text-muted-foreground;
+  }
+  .card-prose .hljs-title,
+  .card-prose .hljs-name,
+  .card-prose .hljs-attr {
+    @apply underline decoration-border underline-offset-2;
+  }
+
+  /* The editor's placeholder-free empty state still needs a caret target. */
+  .card-prose.ProseMirror {
+    @apply cursor-text;
+  }
+}

@@ -42,6 +42,10 @@ export const cards = sqliteTable(
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
+    // When the front/back text was last edited — null until it is. Deliberately
+    // not `$onUpdate`: grading a card writes to this row too, and a review is
+    // not an edit. `updateCard` sets it by hand, and nothing else touches it.
+    updatedAt: integer('updated_at', { mode: 'timestamp' }),
   },
   (table) => [index('cards_deck_id_due_at_idx').on(table.deckId, table.dueAt)],
 );

@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { formatAbsolute, formatRelative } from '@/lib/date';
+import { toPlainText } from '@/lib/markdown';
 import { cards, db, decks } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -103,13 +104,16 @@ export default async function DeckPage({ params }: PageProps<'/decks/[id]'>) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-xs tracking-wide text-muted-foreground uppercase">
-                <th scope="col" className="pb-1 text-left font-normal">
+                <th
+                  scope="col"
+                  className="w-full max-w-0 pb-1 text-left font-normal"
+                >
                   Card
                 </th>
-                <th scope="col" className="pb-1 text-right font-normal">
+                <th scope="col" className="pb-1 pl-4 text-right font-normal">
                   Added
                 </th>
-                <th scope="col" className="pb-1 text-right font-normal">
+                <th scope="col" className="pb-1 pl-4 text-right font-normal">
                   Due
                 </th>
               </tr>
@@ -120,15 +124,22 @@ export default async function DeckPage({ params }: PageProps<'/decks/[id]'>) {
                   key={card.id}
                   className="border-b border-border last:border-0"
                 >
-                  <td className="py-2">{card.front}</td>
+                  <td className="w-full max-w-0 py-2">
+                    <Link
+                      href={`/decks/${deckId}/cards/${card.id}/edit`}
+                      className="-mx-2 block truncate rounded-md px-2 py-1 hover:bg-muted"
+                    >
+                      {toPlainText(card.front)}
+                    </Link>
+                  </td>
                   <td
-                    className="py-2 text-right whitespace-nowrap text-muted-foreground"
+                    className="py-2 pl-4 text-right whitespace-nowrap text-muted-foreground"
                     title={formatAbsolute(card.createdAt)}
                   >
                     {formatRelative(card.createdAt, now)}
                   </td>
                   <td
-                    className="py-2 text-right whitespace-nowrap text-muted-foreground"
+                    className="py-2 pl-4 text-right whitespace-nowrap text-muted-foreground"
                     title={formatAbsolute(card.dueAt)}
                   >
                     {card.dueAt <= now

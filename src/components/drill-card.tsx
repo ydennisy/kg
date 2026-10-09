@@ -1,21 +1,26 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { gradeCard } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Pencil } from 'lucide-react';
 
 export function DrillCard({
   cardId,
   deck,
   front,
   back,
+  editHref,
 }: {
   cardId: number;
   deck: string;
-  front: string;
-  back: string;
+  // Rendered on the server, so none of the markdown pipeline ships here.
+  front: React.ReactNode;
+  back: React.ReactNode;
+  editHref: string;
 }) {
   const [revealed, setRevealed] = useState(false);
 
@@ -41,14 +46,23 @@ export function DrillCard({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            {deck}
-          </span>
-          <p className="text-xl font-medium whitespace-pre-wrap">{front}</p>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              {deck}
+            </span>
+            <Link
+              href={editHref}
+              aria-label="Edit this card"
+              className="-m-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Pencil className="size-4" />
+            </Link>
+          </div>
+          <div className="text-xl font-medium">{front}</div>
 
           <div className="flex min-h-20 items-center border-t border-border pt-4">
             {revealed ? (
-              <p className="whitespace-pre-wrap">{back}</p>
+              <div className="w-full">{back}</div>
             ) : (
               <button
                 type="button"
