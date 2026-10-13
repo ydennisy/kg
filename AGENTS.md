@@ -8,6 +8,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+# Architecture
+
+Build this application as a modular monolith, with clear module boundaries.
+Prefer an imperative shell around a functional core: keep business logic in
+pure functions that are easy to test, and keep I/O, database access, and other
+side effects in the shell.
+
 # Migrations
 
 Always generate **named** migrations, so `drizzle/` reads as a history rather
@@ -22,6 +29,10 @@ pnpm db:generate --name add_reviews_table
 Use [Conventional Commits](https://www.conventionalcommits.org) (`feat:`,
 `fix:`, `chore:`, `refactor:`, `docs:` …). Only commit when explicitly asked —
 never as a side effect of finishing a task.
+
+Do not add AI or coding-agent attribution, co-authorship, or generated-by
+notices to commits or pull requests. Do not add commit trailers, including
+`Co-authored-by` trailers.
 
 # Databases
 
