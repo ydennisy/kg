@@ -5,6 +5,7 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
 import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { Placeholder } from '@tiptap/extensions';
 import { StarterKit } from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 import { useState } from 'react';
@@ -69,6 +70,8 @@ export function CardEditor({
   name,
   defaultValue = '',
   autoFocus = false,
+  placeholder,
+  className,
   onChange,
   onReady,
 }: {
@@ -76,6 +79,9 @@ export function CardEditor({
   name: string;
   defaultValue?: string;
   autoFocus?: boolean;
+  placeholder?: string;
+  /** Replaces the boxed form-field look, e.g. for the borderless composer. */
+  className?: string;
   onChange?: (markdown: string) => void;
   onReady?: () => void;
 }) {
@@ -97,11 +103,13 @@ export function CardEditor({
       inlineMathRule,
       blockMathRule,
       Markdown,
+      ...(placeholder ? [Placeholder.configure({ placeholder })] : []),
     ],
     editorProps: {
       attributes: {
         id,
         class:
+          className ??
           'card-prose min-h-36 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30',
       },
     },

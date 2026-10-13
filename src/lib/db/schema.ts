@@ -2,13 +2,19 @@ import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
 } from 'drizzle-orm/sqlite-core';
 
 export const GRADES = ['again', 'hard', 'good', 'easy'] as const;
+export const NOTE_KINDS = ['note', 'link'] as const;
 
+/**
+ * Legacy grouping. Decks became tags in `add_notes_links_and_tags`, and nothing
+ * new is filed under one; the table stays so old cards keep their history.
+ */
 export const decks = sqliteTable('decks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
@@ -22,9 +28,9 @@ export const cards = sqliteTable(
   'cards',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    deckId: integer('deck_id')
-      .notNull()
-      .references(() => decks.id, { onDelete: 'cascade' }),
+    deckId: integer('deck_id').references(() => decks.id, {
+      onDelete: 'cascade',
+    }),
     front: text('front').notNull(),
     back: text('back').notNull(),
     // Current scheduling state. `interval_raw` is the unrounded interval the
@@ -78,9 +84,68 @@ export const reviews = sqliteTable(
   ],
 );
 
+/**
+ * Everything worth keeping that is not drilled: a `note` is a title and some
+ * markdown, a `link` is a URL with an optional title and note. They share a
+ * table because they share every column but `url`.
+ */
+export const notes = sqliteTable('notes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  kind: text('kind', { enum: NOTE_KINDS }).notNull(),
+  title: text('title').notNull(),
+  body: text('body').notNull().default(''),
+  url: text('url'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+});
+
+export const tags = sqliteTable('tags', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull().unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const cardTags = sqliteTable(
+  'card_tags',
+  {
+    cardId: integer('card_id')
+      .notNull()
+      .references(() => cards.id, { onDelete: 'cascade' }),
+    tagId: integer('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.cardId, table.tagId] }),
+    index('card_tags_tag_id_idx').on(table.tagId),
+  ],
+);
+
+export const noteTags = sqliteTable(
+  'note_tags',
+  {
+    noteId: integer('note_id')
+      .notNull()
+      .references(() => notes.id, { onDelete: 'cascade' }),
+    tagId: integer('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.noteId, table.tagId] }),
+    index('note_tags_tag_id_idx').on(table.tagId),
+  ],
+);
+
 export type Deck = typeof decks.$inferSelect;
 export type NewDeck = typeof decks.$inferInsert;
 export type Card = typeof cards.$inferSelect;
 export type NewCard = typeof cards.$inferInsert;
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
+export type Note = typeof notes.$inferSelect;
+export type Tag = typeof tags.$inferSelect;

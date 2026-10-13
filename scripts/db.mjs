@@ -285,15 +285,43 @@ async function resetDev() {
 const DAY_SECONDS = 24 * 60 * 60;
 
 /**
- * Enough decks to browse and enough due cards to drill, with the scheduling
+ * Enough cards to search and enough due cards to drill, with the scheduling
  * state spread across the states the app can be in: brand new, mid-learning,
  * comfortably graduated, and one card that has been forgotten twice. `due` is
  * in days from now, so negatives are waiting in the queue.
  */
 const SEED = [
   {
-    name: 'Spanish verbs',
-    description: 'The irregular ones that keep catching me out.',
+    tags: ['linear-algebra', 'math'],
+    cards: [
+      {
+        front: 'What does the determinant of a $2 \\times 2$ matrix measure?',
+        back: 'The factor by which the map scales area.\n\n$$\\det\\begin{pmatrix}a & b\\\\ c & d\\end{pmatrix} = ad - bc$$',
+        due: -1,
+        reps: 2,
+        interval: 3,
+        ease: 2.5,
+      },
+      {
+        front: 'When is a linear map invertible?',
+        back: 'Exactly when its determinant is non-zero.',
+        due: 0,
+        reps: 0,
+        interval: 0,
+        ease: 2.5,
+      },
+      {
+        front: 'What is an eigenvector?',
+        back: 'A non-zero vector that a linear map only scales: $Av = \\lambda v$.',
+        due: 5,
+        reps: 3,
+        interval: 8,
+        ease: 2.5,
+      },
+    ],
+  },
+  {
+    tags: ['spanish'],
     cards: [
       {
         front: 'to be (permanent)',
@@ -356,8 +384,7 @@ const SEED = [
     ],
   },
   {
-    name: 'HTTP status codes',
-    description: 'The ones worth knowing without looking them up.',
+    tags: ['http'],
     cards: [
       {
         front: '201',
@@ -410,8 +437,7 @@ const SEED = [
     ],
   },
   {
-    name: 'SQLite',
-    description: 'Things this app itself relies on.',
+    tags: ['sqlite', 'databases'],
     cards: [
       {
         front: 'What does VACUUM INTO do?',
@@ -449,6 +475,55 @@ const SEED = [
   },
 ];
 
+/** Notes and links, tagged so that they turn up as "related" mid-drill. */
+const NOTES = [
+  {
+    kind: 'note',
+    title: 'Linear algebra, chapter map',
+    body: 'Vectors → span → linear maps → determinants → eigen.\n\nThe determinant is area scaling; **zero means the map squashes space**.',
+    tags: ['linear-algebra'],
+    age: 12,
+  },
+  {
+    kind: 'note',
+    title: 'ser vs estar',
+    body: '- **ser**: what something *is* — identity, origin, time\n- **estar**: how or where it is — state, location',
+    tags: ['spanish'],
+    age: 4,
+  },
+  {
+    kind: 'note',
+    title: 'Status code families',
+    body: '`2xx` worked, `3xx` look elsewhere, `4xx` your fault, `5xx` ours.',
+    tags: ['http'],
+    age: 2,
+  },
+  {
+    kind: 'link',
+    title: 'Essence of linear algebra',
+    url: 'https://www.3blue1brown.com/topics/linear-algebra',
+    body: 'Watch chapter 6 before eigenvectors.',
+    tags: ['linear-algebra', 'math'],
+    age: 9,
+  },
+  {
+    kind: 'link',
+    title: 'HTTP response status codes',
+    url: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status',
+    body: '',
+    tags: ['http'],
+    age: 6,
+  },
+  {
+    kind: 'link',
+    title: 'SQLite: Write-Ahead Logging',
+    url: 'https://www.sqlite.org/wal.html',
+    body: '',
+    tags: ['sqlite', 'databases'],
+    age: 1,
+  },
+];
+
 /**
  * Replaces the contents of the development database. Destructive by design:
  * dev data is scratch, and a seed you can trust to be identical every time is
@@ -466,33 +541,40 @@ async function seed() {
 
   const client = createClient({ url: `file:${developmentFile}` });
   const now = Math.floor(Date.now() / 1000);
-  let deckCount = 0;
+  const tagIds = new Map();
   let cardCount = 0;
 
+  async function tag(name) {
+    if (!tagIds.has(name)) {
+      const { lastInsertRowid } = await client.execute({
+        sql: 'INSERT INTO tags (name, created_at) VALUES (?, ?)',
+        args: [name, now - 30 * DAY_SECONDS],
+      });
+      tagIds.set(name, Number(lastInsertRowid));
+    }
+    return tagIds.get(name);
+  }
+
   try {
-    // reviews and cards go with their parents via ON DELETE CASCADE.
-    await client.execute('DELETE FROM decks');
+    await client.execute('PRAGMA foreign_keys = ON');
+    // reviews and the tag links go with their parents via ON DELETE CASCADE.
+    for (const table of ['decks', 'cards', 'notes', 'tags']) {
+      await client.execute(`DELETE FROM ${table}`);
+    }
     await client.execute(
-      "DELETE FROM sqlite_sequence WHERE name IN ('decks', 'cards', 'reviews')",
+      "DELETE FROM sqlite_sequence WHERE name IN ('decks', 'cards', 'reviews', 'notes', 'tags')",
     );
 
-    for (const deck of SEED) {
-      const { lastInsertRowid: deckId } = await client.execute({
-        sql: 'INSERT INTO decks (name, description, created_at) VALUES (?, ?, ?)',
-        args: [deck.name, deck.description, now - 30 * DAY_SECONDS],
-      });
-      deckCount += 1;
-
-      for (const card of deck.cards) {
+    for (const group of SEED) {
+      for (const [index, card] of group.cards.entries()) {
         const reps = card.reps ?? 0;
         const interval = card.interval ?? 0;
-        await client.execute({
+        const { lastInsertRowid: cardId } = await client.execute({
           sql: `INSERT INTO cards
-                  (deck_id, front, back, due_at, interval_raw, interval_days,
+                  (front, back, due_at, interval_raw, interval_days,
                    ease_factor, reps, lapses, last_reviewed_at, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           args: [
-            Number(deckId),
             card.front,
             card.back,
             now + Math.round(card.due * DAY_SECONDS),
@@ -504,22 +586,48 @@ async function seed() {
             reps > 0
               ? now - Math.round((interval - card.due) * DAY_SECONDS)
               : null,
-            now - 30 * DAY_SECONDS,
+            now - (30 - cardCount) * DAY_SECONDS + index,
           ],
         });
+        for (const name of group.tags) {
+          await client.execute({
+            sql: 'INSERT INTO card_tags (card_id, tag_id) VALUES (?, ?)',
+            args: [Number(cardId), await tag(name)],
+          });
+        }
         cardCount += 1;
+      }
+    }
+
+    for (const note of NOTES) {
+      const { lastInsertRowid: noteId } = await client.execute({
+        sql: 'INSERT INTO notes (kind, title, body, url, created_at) VALUES (?, ?, ?, ?, ?)',
+        args: [
+          note.kind,
+          note.title,
+          note.body,
+          note.url ?? null,
+          now - note.age * DAY_SECONDS,
+        ],
+      });
+      for (const name of note.tags) {
+        await client.execute({
+          sql: 'INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)',
+          args: [Number(noteId), await tag(name)],
+        });
       }
     }
   } finally {
     client.close();
   }
 
-  const due = SEED.flatMap((deck) => deck.cards).filter(
+  const due = SEED.flatMap((group) => group.cards).filter(
     (card) => card.due <= 0,
   );
   console.log(
     `Seeded ${path.relative(process.cwd(), developmentFile)}: ` +
-      `${deckCount} decks, ${cardCount} cards, ${due.length} due now.`,
+      `${cardCount} cards, ${NOTES.length} notes and links, ` +
+      `${tagIds.size} tags, ${due.length} due now.`,
   );
 }
 

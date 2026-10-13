@@ -1,32 +1,41 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { DM_Mono, Inter } from 'next/font/google';
 // KaTeX ships its own stylesheet and its layout depends on it entirely;
 // rendered math is unreadable without it.
 import 'katex/dist/katex.min.css';
+import 'twenty-ui/theme-light.css';
+import 'twenty-ui/theme-dark.css';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+import { Theme } from '@/components/theme';
+
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const dmMono = DM_Mono({
+  variable: '--font-dm-mono',
   subsets: ['latin'],
+  weight: ['400', '500'],
 });
 
 export const metadata: Metadata = {
-  title: 'fcards',
-  description: 'A minimal spaced-repetition flashcard app.',
+  title: 'Knowledge',
+  description: 'Cards, notes and links, searchable and drillable.',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The theme class is set by the provider after hydration.
+      suppressHydrationWarning
+      className={`light ${inter.variable} ${dmMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Theme>{children}</Theme>
+      </body>
     </html>
   );
 }

@@ -7,7 +7,7 @@ schedules when you next see it.
 
 ```bash
 pnpm install
-pnpm db:reset       # create data/dev.db and fill it with sample decks
+pnpm db:reset       # create data/dev.db and fill it with sample cards, notes and links
 pnpm dev            # development, http://localhost:3000
 
 pnpm db:migrate:prod
@@ -205,7 +205,7 @@ installs this for you.
 | `pnpm db:backup`                         | snapshot production into `data/backups/`             |
 | `pnpm db:backups`                        | list snapshots and what each one holds               |
 | `pnpm db:restore <timestamp\|latest>`    | put a snapshot back, saving the current file first   |
-| `pnpm db:seed`                           | replace `dev.db`'s contents with the sample decks    |
+| `pnpm db:seed`                           | replace `dev.db`'s contents with the sample data     |
 | `pnpm db:clone-prod`                     | copy production over `dev.db`, to work on real data  |
 | `pnpm db:reset`                          | rebuild `dev.db` from migrations and seed it         |
 
