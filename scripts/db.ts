@@ -1,23 +1,20 @@
-#!/usr/bin/env node
 /**
  * The commands that make the development database disposable: seed it, or
  * delete it so migrations can rebuild it. They only ever touch a local SQLite
  * file — production is a hosted Turso database and is out of their reach.
  *
- * Usage: node scripts/db.mjs <command>
+ * Usage: tsx scripts/db.ts <command>
  */
 import { createClient } from '@libsql/client';
-import nextEnv from '@next/env'; // CommonJS: no named ESM exports
+import { loadEnvConfig } from '@next/env';
 import fs from 'node:fs';
 import path from 'node:path';
-
-const { loadEnvConfig } = nextEnv;
 
 /**
  * The development database file. Refuses anything but a local `file:` URL, so
  * a stray Turso URL in `.env.development.local` cannot be seeded over.
  */
-function developmentFile(what) {
+function developmentFile(what: string) {
   loadEnvConfig(process.cwd(), true, console, true);
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL is not set for development');
@@ -300,10 +297,10 @@ async function seed() {
 
   const client = createClient({ url: `file:${file}` });
   const now = Math.floor(Date.now() / 1000);
-  const tagIds = new Map();
+  const tagIds = new Map<string, number>();
   let cardCount = 0;
 
-  async function tag(name) {
+  async function tag(name: string): Promise<number> {
     if (!tagIds.has(name)) {
       const { lastInsertRowid } = await client.execute({
         sql: 'INSERT INTO tags (name, created_at) VALUES (?, ?)',
@@ -311,7 +308,7 @@ async function seed() {
       });
       tagIds.set(name, Number(lastInsertRowid));
     }
-    return tagIds.get(name);
+    return tagIds.get(name)!;
   }
 
   try {
@@ -390,7 +387,7 @@ async function seed() {
   );
 }
 
-const commands = {
+const commands: Record<string, () => Promise<void>> = {
   'reset-dev': resetDev,
   seed,
 };
@@ -398,9 +395,12 @@ const command = commands[process.argv[2]];
 
 if (!command) {
   console.error(
-    `Usage: node scripts/db.mjs <${Object.keys(commands).join('|')}>`,
+    `Usage: tsx scripts/db.ts <${Object.keys(commands).join('|')}>`,
   );
   process.exit(1);
 }
 
-await command();
+command().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

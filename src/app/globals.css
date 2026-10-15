@@ -7,8 +7,6 @@
 @layer theme, base, twenty, components, utilities;
 @import 'twenty-ui/style.css' layer(twenty);
 @import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 

@@ -1,5 +1,6 @@
-/** @type {readonly string[]} */
-export const contentTables = [
+import type { Client } from '@libsql/client';
+
+const contentTables = [
   'decks',
   'cards',
   'notes',
@@ -7,13 +8,11 @@ export const contentTables = [
   'reviews',
   'card_tags',
   'note_tags',
-];
+] as const;
 
 /** Copy legacy content into a fresh baseline. Never copy auth or migration history.
- * @param {import('@libsql/client').Client} source
- * @param {import('@libsql/client').Client} target
  */
-export async function importLegacy(source, target) {
+export async function importLegacy(source: Client, target: Client) {
   const read = await source.transaction('read');
   const write = await target.transaction('write');
   try {
@@ -24,7 +23,7 @@ export async function importLegacy(source, target) {
           'Destination content must be empty; nothing was imported.',
         );
     }
-    const counts = {};
+    const counts: Partial<Record<(typeof contentTables)[number], number>> = {};
     for (const table of contentTables) {
       const result = await read.execute(`SELECT * FROM ${table}`);
       if (result.rows.some((row) => row.user_id != null)) {
@@ -56,10 +55,8 @@ export async function importLegacy(source, target) {
 }
 
 /** Assign only unowned content to an existing GitHub user, atomically.
- * @param {import('@libsql/client').Client} client
- * @param {string} userId
  */
-export async function assignOwner(client, userId) {
+export async function assignOwner(client: Client, userId: string) {
   const tx = await client.transaction('write');
   try {
     const account = await tx.execute({
@@ -102,7 +99,7 @@ export async function assignOwner(client, userId) {
         });
       }
     }
-    const counts = { tags: legacyTags.rows.length };
+    const counts: Record<string, number> = { tags: legacyTags.rows.length };
     for (const table of ['decks', 'cards', 'notes']) {
       const result = await tx.execute({
         sql: `UPDATE ${table} SET user_id = ? WHERE user_id IS NULL`,

@@ -36,7 +36,7 @@ vi.mock('@/lib/db', async () => {
 import { db } from '@/lib/db';
 import { saveItem, deleteItem, gradeCard } from '@/app/actions';
 import { loadItems } from '@/lib/knowledge/load';
-import { assignOwner, importLegacy } from '../../scripts/lib/ownership.mjs';
+import { assignOwner, importLegacy } from '../../scripts/lib/ownership';
 import type { ItemDraft } from '@/lib/knowledge/types';
 
 const client = db.$client;

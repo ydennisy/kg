@@ -32,11 +32,3 @@ export function formatRelative(date: Date, now: Date = new Date()): string {
 
   return numeric.format(Math.round(seconds / 60), 'minute');
 }
-
-/** The exact timestamp, for a `title` tooltip behind the relative one. */
-export function formatAbsolute(date: Date): string {
-  return date.toLocaleString('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}

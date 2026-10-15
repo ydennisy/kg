@@ -1,3 +1,10 @@
 allowBuilds:
   unrs-resolver: true
   esbuild: true
+# Keep Markdown rendering and editor math on the same supported, patched KaTeX.
+# 0.18.11 was withdrawn for breaking changes; Tiptap does not yet support 0.19.
+overrides:
+  katex: 0.18.10
+  # Patch vulnerable transitive releases without crossing their major versions.
+  'undici@^8.0.0': ^8.10.2
+  'brace-expansion@^5.0.0': ^5.0.12

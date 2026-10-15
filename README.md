@@ -5,6 +5,8 @@ and search. Spaced-repetition reviews schedule when you next see each card.
 
 ## Running it
 
+Use Node.js 22.12+, 24, or 26+ (the supported Vitest 5 runtime lines).
+
 ```bash
 pnpm install
 cp .env.example .env.development.local   # fill in the auth variables
@@ -134,24 +136,46 @@ Backups of production are Turso's: it keeps point-in-time history, and
 
 ### Database commands
 
-|                                          |                                                      |
-| ---------------------------------------- | ---------------------------------------------------- |
-| `pnpm db:generate --name <what_changed>` | write a named migration from the schema              |
-| `pnpm db:migrate`                        | apply migrations to `dev.db`                         |
-| `pnpm db:migrate:prod`                   | apply migrations to production                       |
-| `pnpm db:push`                           | push the schema straight onto `dev.db`, no migration |
-| `pnpm db:studio`                         | browse `dev.db`                                      |
-| `pnpm db:studio:prod`                    | browse production — it can edit, so mind your hands  |
-| `pnpm db:seed`                           | replace `dev.db`'s contents with the sample data     |
-| `pnpm db:reset`                          | rebuild `dev.db` from migrations and seed it         |
+|                                          |                                                     |
+| ---------------------------------------- | --------------------------------------------------- |
+| `pnpm db:generate --name <what_changed>` | write a named migration from the schema             |
+| `pnpm db:migrate`                        | apply migrations to `dev.db`                        |
+| `pnpm db:migrate:prod`                   | apply migrations to production                      |
+| `pnpm db:studio`                         | browse `dev.db`                                     |
+| `pnpm db:studio:prod`                    | browse production — it can edit, so mind your hands |
+| `pnpm db:seed`                           | replace `dev.db`'s contents with the sample data    |
+| `pnpm db:reset`                          | rebuild `dev.db` from migrations and seed it        |
 
-The seed (in [`scripts/db.mjs`](scripts/db.mjs)) is three decks of eighteen
-cards, deliberately spread across the states a card can be in — some brand new,
-some mid-learning, several already due, one that has been forgotten twice — so
-that the deck list, the drill queue and a full-deck pass all have something real
-to show without any clicking.
+The seed (in [`scripts/db.ts`](scripts/db.ts)) contains twenty-one cards,
+deliberately spread across the states a card can be in — some brand new, some
+mid-learning, several already due, one that has been forgotten twice — so that
+the deck list, the drill queue and a full-deck pass all have something real to
+show without any clicking.
 
 ## Toolchain
+
+Database utilities are TypeScript files in `scripts/`, executed by `tsx` through
+the `pnpm db:*` commands. `pnpm typecheck` checks these files too; `tsx` runs
+them without typechecking.
+
+The scripts have distinct jobs: `dev` / `build` / `start` run the application;
+`test` watches while `test:run` runs once; `format` writes while `format:check`
+checks. Database generation, migration, inspection, seeding, and reset remain
+separate. Import and owner assignment are still needed for first deployment; the
+`:prod` variants explicitly select production configuration. The `db:push`
+shortcut was removed so schema changes follow the named-migration workflow.
+
+Dependency updates retain ESLint 9 for the React lint plugin's peer range and
+the TypeScript 6 compiler API alias for typescript-eslint. KaTeX is pinned to
+0.18.10 across the editor and Markdown renderer: Tiptap's math extension does
+not yet support 0.19, and 0.18.11 was deprecated for accidental breaking
+changes.
+
+The dependency audit still reports two transitive advisories: an older esbuild
+inside drizzle-kit's legacy loader (moderate), and braces inside Next's ESLint
+plugin (high, no patched release reported). These are upstream tooling
+limitations; no incompatible major-version overrides are applied to silence
+them.
 
 ```bash
 pnpm typecheck   # tsc --noEmit, on TypeScript 7
@@ -161,7 +185,7 @@ pnpm test        # vitest, watch mode
 
 Unit tests live beside the modules they test as `*.test.ts` / `*.test.tsx`.
 Cross-module database and ownership tests live in `tests/integration/`, with
-their fixtures. Vitest defaults to Node; component tests opt into jsdom.
+their fixtures. Vitest runs in Node.
 
 The two TypeScripts in `package.json` are not a mistake. TypeScript 7 is the
 native compiler and ships no JavaScript compiler API, which tools that

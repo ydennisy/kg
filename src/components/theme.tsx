@@ -14,7 +14,7 @@ function subscribe(onChange: () => void) {
 /**
  * The design system's tokens live under a `.light` or `.dark` class on <html>,
  * which its ThemeProvider sets. This follows the operating system's setting,
- * and the shadcn styles still in use key off the same `.dark` class.
+ * and our Tailwind dark variants key off the same `.dark` class.
  */
 export function Theme({ children }: { children: React.ReactNode }) {
   const dark = useSyncExternalStore(

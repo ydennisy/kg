@@ -16,11 +16,15 @@ _Last updated 2026-10-15._
 
 ## Validation
 
-64 tests, typecheck, lint and formatting pass. The production build completes,
-but reports missing `BETTER_AUTH_URL` / `BETTER_AUTH_SECRET`; configure these
-before testing sign-in. Tests cover cross-user isolation, legacy import
-rollback, ID/schedule/review preservation, explicit assignment, and baseline
-migration reruns.
+66 tests, typecheck, lint and formatting pass. The upgraded Next.js production
+build completes with temporary build-only auth settings; real GitHub credentials
+are still needed for sign-in. Tests cover cross-user isolation, import rollback,
+ID/schedule/review preservation, assignment, baseline reruns, and the TypeScript
+CLI commands executed through tsx against temporary databases.
+
+Dependencies were updated and unused UI/test scaffolding removed. Knip and peer
+checks are clean. ESLint 9 and KaTeX 0.18.10 remain for upstream compatibility;
+two transitive tooling advisories remain (see README).
 
 ## Deployment checklist
 
