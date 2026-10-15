@@ -1,7 +1,7 @@
-# fcards
+# kg
 
-A minimal spaced-repetition flashcard app. Decks hold cards; drilling a card
-schedules when you next see it.
+A personal knowledge base for flashcards, notes, and links, organized with tags
+and search. Spaced-repetition reviews schedule when you next see each card.
 
 ## Running it
 

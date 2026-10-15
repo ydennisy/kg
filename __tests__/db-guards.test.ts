@@ -7,12 +7,12 @@ import {
 } from '@/lib/db/config';
 
 const DEV = 'file:./data/dev.db';
-const PROD = 'libsql://fcards-acme.turso.io';
+const PROD = 'libsql://kg-acme.turso.io';
 
 describe('isRemoteDatabase', () => {
   it.each([
     ['a Turso URL', PROD],
-    ['an https URL', 'https://fcards-acme.turso.io'],
+    ['an https URL', 'https://kg-acme.turso.io'],
   ])('treats %s as production', (_label, url) => {
     expect(isRemoteDatabase(url)).toBe(true);
   });

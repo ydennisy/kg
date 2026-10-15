@@ -24,7 +24,7 @@ vi.mock('@/lib/db', async () => {
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
-  identity.directory = mkdtempSync(join(tmpdir(), 'fcards-ownership-'));
+  identity.directory = mkdtempSync(join(tmpdir(), 'kg-ownership-'));
   return {
     ...schema,
     db: drizzle(createClient({ url: `file:${identity.directory}/target.db` }), {
@@ -162,7 +162,7 @@ describe('private collections through real SQL and server actions', () => {
 
 describe('fresh baseline and legacy import', () => {
   it('applies the single baseline through the migrator and can rerun it', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'fcards-baseline-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kg-baseline-'));
     const fresh = createClient({ url: `file:${directory}/fresh.db` });
     try {
       const { drizzle } = await import('drizzle-orm/libsql');
@@ -185,7 +185,7 @@ describe('fresh baseline and legacy import', () => {
   });
 
   it('preserves IDs, content, schedules and reviews; assigns explicitly and merges tags', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'fcards-legacy-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kg-legacy-'));
     const source = createClient({ url: `file:${directory}/source.db` });
     try {
       await source.executeMultiple(
@@ -261,7 +261,7 @@ describe('fresh baseline and legacy import', () => {
   });
 
   it('rolls back an import failure without leaving partial content', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'fcards-legacy-'));
+    const directory = mkdtempSync(join(tmpdir(), 'kg-legacy-'));
     const source = createClient({ url: `file:${directory}/source.db` });
     try {
       await source.executeMultiple(
