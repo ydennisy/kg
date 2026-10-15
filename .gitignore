@@ -30,13 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files. .env.development and .env.production are committed on purpose:
-# they hold no secrets, only which database each environment talks to. Secrets
-# and personal overrides belong in the *.local variants, which stay ignored.
+# env files. .env.development is committed on purpose: it holds no secrets,
+# only the local database path. Secrets belong in the *.local variants.
 .env*
 !.env.example
 !.env.development
-!.env.production
 
 # vercel
 .vercel

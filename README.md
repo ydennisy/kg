@@ -7,20 +7,67 @@ schedules when you next see it.
 
 ```bash
 pnpm install
+cp .env.example .env.development.local   # fill in the auth variables
 pnpm db:reset       # create data/dev.db and fill it with sample cards, notes and links
-pnpm dev            # development, http://localhost:3000
-
-pnpm db:migrate:prod
-pnpm prod           # production, http://localhost:3000
+pnpm dev            # http://localhost:3000
 ```
 
-`pnpm dev` is the usual Next dev server: hot reload, and a scratch database you
-can do anything to. `pnpm prod` backs up the real database, applies any pending
-migrations to it, builds, and serves the build — it is the mode the real cards
-live in. Production is local for now; nothing here assumes it stays that way. It
-starts empty: every card in it got there by being typed into the app.
+Development signs in with GitHub like production does, so it needs its own
+GitHub OAuth app (callback `http://localhost:3000/api/auth/callback/github`).
+Anyone can sign in with GitHub; each account has a private collection.
 
-Once built, `pnpm start` reboots the production server without rebuilding.
+## Deploying
+
+Production is Vercel serving the app, with the data in a hosted
+[Turso](https://turso.tech) database. Vercel needs these environment variables —
+`.env.example` says what each one is:
+
+`DATABASE_URL`, `TURSO_AUTH_TOKEN`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`,
+`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+
+Migrations are not run by the deploy. Put the Turso URL and token in
+`.env.production.local` and apply them from your machine, before deploying code
+that needs them:
+
+```bash
+pnpm db:migrate:prod
+```
+
+## Private collections and existing data
+
+Cards, notes, links, tags, and legacy decks belong to a user. Every application
+read and mutation is scoped to the signed-in account. Reviews and scheduling
+belong to the card. Tag names are unique within a user's collection.
+
+The pre-deployment migrations have been squashed into
+`drizzle/0000_initial_schema.sql`. **Apply this baseline only to a fresh
+database.** Do not run it against an existing database with the old migrations,
+or copy the old migration journal into the new database.
+
+To move the existing local collection to a fresh Turso database:
+
+1. Keep `data/prod.db` intact and take a separate backup.
+2. Run `pnpm db:migrate:prod` against the empty Turso database.
+3. Run `pnpm db:import-legacy:prod data/prod.db`. This reads the source without
+   modifying it, copies content and review history in one transaction, preserves
+   IDs and schedules, and refuses a destination that already has content. Auth
+   records and migration history are not copied.
+4. Deploy and sign in with GitHub. Your collection is initially empty.
+5. Look up your user ID using this read-only query in the database console:
+   `SELECT user.id, user.email, account.account_id FROM user JOIN account ON account.user_id = user.id WHERE account.provider_id = 'github';`
+   Verify the account is yours, then run `pnpm db:assign-owner:prod <user-id>`.
+
+Assignment atomically attaches all unassigned content to that existing GitHub
+user and merges duplicate tag names. It leaves already-owned content alone.
+Unassigned records are preserved but invisible and cannot be edited through the
+app; there is no automatic first-user claim. Reviews retain their card links.
+Nullable ownership exists only for this import/assignment stage and dev seeds;
+new records created by the app always have an owner.
+
+For development, `pnpm db:reset` recreates the scratch database from the
+baseline. After signing in, run `pnpm db:assign-owner <user-id>` to attach the
+sample data. The commands without `:prod` refuse remote databases. Existing
+production data must be imported into a fresh baseline, never reset.
 
 ## What a card can hold
 
@@ -33,7 +80,7 @@ What gets stored is still markdown. The rich text is only how editing feels, so
 a card stays greppable, portable, and readable straight out of SQLite:
 
 ```
-$ sqlite3 data/prod.db "select front from cards limit 1"
+$ sqlite3 data/dev.db "select front from cards limit 1"
 # hello
 ```
 
@@ -56,141 +103,34 @@ is not a review.
 
 ## The two databases
 
-Both are plain SQLite files under `data/`, spoken to through the same libSQL
-client that a hosted Turso database would use.
+|             | where                 | what it holds                             |
+| ----------- | --------------------- | ----------------------------------------- |
+| development | `data/dev.db`, a file | scratch. Reset it, break it, no one cares |
+| production  | Turso, remote         | **the real cards and review history**     |
 
-|             | file            | what it holds                                     |
-| ----------- | --------------- | ------------------------------------------------- |
-| development | `data/dev.db`   | scratch. Reset it, break it, no one cares         |
-| production  | `data/prod.db`  | **the real cards and review history**             |
-| backups     | `data/backups/` | hourly snapshots of production, thinning with age |
+So "is this production?" is "is this remote?" — a `file:` URL is development,
+anything else is production. Two guards in
+[`src/lib/db/config.ts`](src/lib/db/config.ts) hang off that, and
+[`__tests__/db-guards.test.ts`](__tests__/db-guards.test.ts) holds them to it:
 
-Which one you get is decided by `NODE_ENV`, through Next's own env-file loading:
-`.env.development` and `.env.production` are committed (they hold no secrets —
-just a path each) so the split is the same for every checkout and survives a
-fresh clone. `next dev` runs as `development`; `next build`, `next start` and
-the `:prod` scripts run as `production`.
+**Development can't reach production.** The app refuses to start against a
+remote database unless `NODE_ENV` is `production`, and `drizzle.config.ts`
+refuses the same for drizzle-kit outside the `:prod` scripts. The easy way to
+get this wrong is Turso credentials in `.env.local`, which Next loads in _both_
+environments — keep them in `.env.production.local`.
 
-### Why the production data is hard to lose
-
-Four independent things have to go wrong, not one. The first two are code, and
-[`__tests__/db-guards.test.ts`](__tests__/db-guards.test.ts) holds them to it —
-including the near-misses a naive string comparison would wave through: a backup
-file, an absolute path, `data/../data/prod.db`. The other two are arrangement
-rather than code.
-
-**Development can't reach it.** `src/lib/db/index.ts` refuses to open the app if
-`DATABASE_URL` resolves to `data/prod.db` while `NODE_ENV` isn't `production`,
-and `drizzle.config.ts` refuses the same for drizzle-kit. This is worth a guard
-rather than trusting configuration because there is a genuinely easy way to get
-it wrong: `.env.local` is loaded in _both_ environments, so a `DATABASE_URL`
-left in there would silently point development at the real cards. Put
-per-environment overrides in `.env.development.local` / `.env.production.local`
-instead — never `.env.local`.
-
-**`push` can't reach it.** `drizzle-kit push` diffs the schema straight onto the
-database and will drop a column, and the data in it, with nothing to review.
-`drizzle.config.ts` rejects it against production outright. Schema changes reach
-production only as a named migration:
+**`push` can't reach production.** `drizzle-kit push` diffs the schema straight
+onto the database and will drop a column, and its data, with nothing to review.
+Schema changes reach production only as a named migration:
 
 ```bash
 pnpm db:generate --name add_something   # writes drizzle/NNNN_add_something.sql
 pnpm db:migrate                         # try it on dev.db first
-pnpm db:migrate:prod                    # then production, after a backup
+pnpm db:migrate:prod                    # then production
 ```
 
-**It is backed up continuously, and the backups are checked.** Covered in full
-below.
-
-**Nothing overwrites it.** `data/` is gitignored, so a checkout, a stash or a
-branch switch can never touch it, and no command copies development _over_
-production — `db:clone-prod` only runs the other way.
-
-### Backups
-
-The production server snapshots `data/prod.db` when it boots and every hour it
-stays up. That covers the whole window in which the data can change, because
-nothing writes to production except the production server. On top of that, every
-command that is about to write takes its own snapshot first — `db:migrate:prod`,
-`db:studio:prod` and `db:restore` all do.
-
-Snapshots use SQLite's `VACUUM INTO` rather than a file copy, so they are
-consistent even while the server is mid-write, and each one is opened and run
-through `PRAGMA integrity_check` immediately after it is written. A backup
-nobody has read is a rumour.
-
-Retention is grandfather-father-son, because a flat "keep the newest N" is the
-wrong shape once backups are hourly — a day of them would evict every copy from
-before the damage you have only just noticed:
-
-| age          | what is kept          |
-| ------------ | --------------------- |
-| under 2 days | every hourly snapshot |
-| 2–30 days    | one per day           |
-| over 30 days | one per week, forever |
-
-Snapshots taken before a specific write are labelled — `…Z-before-migrate.db` —
-and retention never prunes those, whatever their age. Without that rule, an
-hourly backup landing in the same hour as a bad migration would evict the copy
-from just before it. There are only ever a handful of them.
-[`__tests__/db-retention.test.ts`](__tests__/db-retention.test.ts) holds the
-policy to all of this, including that a year of hourly backups still leaves
-something from a year ago.
-
-**Getting data back.** `pnpm db:backups` lists what there is, with what each one
-holds, so you are choosing by content rather than by guessing at a timestamp:
-
-```
-2026-08-29T16-51-28-328Z                      0m ago    40 KB  1 decks, 1 cards, 0 reviews
-2026-08-29T16-49-35-179Z-before-migrate       2m ago    40 KB  0 decks, 0 cards, 0 reviews
-```
-
-```bash
-pnpm db:restore latest                     # or a timestamp from the list above
-```
-
-Restoring verifies the snapshot before trusting it, and saves the file it is
-about to replace as a `-before-restore` snapshot — so restoring the wrong one is
-undone by restoring again. Stop the production server first; a running server
-holds an open handle to the file being swapped out.
-
-**Getting them off this machine.** Everything above still lives on one disk. Set
-`BACKUP_MIRROR_DIR` in `.env.production.local` to a synced folder and every
-snapshot is copied there and pruned on the same schedule:
-
-```bash
-BACKUP_MIRROR_DIR=~/Library/Mobile Documents/com~apple~CloudDocs/fcards-backups
-```
-
-A mirror that is unavailable warns and carries on — the local snapshot is
-already written, and a missing Dropbox is no reason to fail a backup.
-
-**Backups when the server is not running.** The hourly schedule lives in
-[`src/instrumentation.ts`](src/instrumentation.ts) and so only runs while
-production is up — which is when the data can change, but not when the disk can
-rot. If you want them regardless, `launchd` will run the same command:
-
-```bash
-cat > ~/Library/LaunchAgents/dev.fcards.backup.plist <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>dev.fcards.backup</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>$(which node)</string>
-    <string>$PWD/scripts/db.mjs</string>
-    <string>backup</string>
-  </array>
-  <key>WorkingDirectory</key><string>$PWD</string>
-  <key>StartInterval</key><integer>3600</integer>
-</dict></plist>
-PLIST
-launchctl load ~/Library/LaunchAgents/dev.fcards.backup.plist
-```
-
-Undo it with `launchctl unload` and deleting the file. Nothing in the repo
-installs this for you.
+Backups of production are Turso's: it keeps point-in-time history, and
+`turso db shell <db> .dump > backup.sql` takes a copy you hold yourself.
 
 ### Database commands
 
@@ -198,33 +138,18 @@ installs this for you.
 | ---------------------------------------- | ---------------------------------------------------- |
 | `pnpm db:generate --name <what_changed>` | write a named migration from the schema              |
 | `pnpm db:migrate`                        | apply migrations to `dev.db`                         |
-| `pnpm db:migrate:prod`                   | back up, then apply migrations to `prod.db`          |
+| `pnpm db:migrate:prod`                   | apply migrations to production                       |
 | `pnpm db:push`                           | push the schema straight onto `dev.db`, no migration |
 | `pnpm db:studio`                         | browse `dev.db`                                      |
-| `pnpm db:studio:prod`                    | browse `prod.db` — it can edit, so mind your hands   |
-| `pnpm db:backup`                         | snapshot production into `data/backups/`             |
-| `pnpm db:backups`                        | list snapshots and what each one holds               |
-| `pnpm db:restore <timestamp\|latest>`    | put a snapshot back, saving the current file first   |
+| `pnpm db:studio:prod`                    | browse production — it can edit, so mind your hands  |
 | `pnpm db:seed`                           | replace `dev.db`'s contents with the sample data     |
-| `pnpm db:clone-prod`                     | copy production over `dev.db`, to work on real data  |
 | `pnpm db:reset`                          | rebuild `dev.db` from migrations and seed it         |
-
-`db:seed`, `db:clone-prod` and `db:reset` are what let development stay
-disposable: whatever state you need is one command away, so there is never a
-reason to develop against the real thing.
 
 The seed (in [`scripts/db.mjs`](scripts/db.mjs)) is three decks of eighteen
 cards, deliberately spread across the states a card can be in — some brand new,
 some mid-learning, several already due, one that has been forgotten twice — so
 that the deck list, the drill queue and a full-deck pass all have something real
 to show without any clicking.
-
-### Moving production off this machine
-
-Put the Turso URL and token in `.env.production.local`, which takes precedence
-over the committed `.env.production` and is gitignored. Everything above keeps
-working except the commands that manipulate SQLite files directly — `db:backup`,
-`db:restore` and `db:clone-prod` — which will tell you to use the Turso CLI.
 
 ## Toolchain
 

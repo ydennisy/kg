@@ -20,7 +20,7 @@ if (!url) {
 assertDrizzleTargetIsSafe(url, process.env.NODE_ENV, process.argv[2]);
 
 export default defineConfig({
-  schema: './src/lib/db/schema.ts',
+  schema: ['./src/lib/db/schema.ts', './src/lib/auth/schema.ts'],
   out: './drizzle',
   dialect: 'turso',
   dbCredentials: {

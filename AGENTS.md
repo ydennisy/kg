@@ -36,8 +36,9 @@ notices to commits or pull requests. Do not add commit trailers, including
 
 # Databases
 
-`data/dev.db` is scratch; `data/prod.db` holds real cards and must not be lost.
-Guards in `src/lib/db/config.ts` enforce the split — read the README's "The two
-databases" section before touching anything database-shaped. Never run
-`drizzle-kit push` against production, and never reach for `--force` or an
-inline `DATABASE_URL` to get past a guard that fires.
+`data/dev.db` is scratch; production is the remote Turso database and holds
+real cards that must not be lost. Guards in `src/lib/db/config.ts` treat any
+non-`file:` URL as production — read the README's "The two databases" section
+before touching anything database-shaped. Never run `drizzle-kit push` against
+production, and never reach for `--force` or an inline `DATABASE_URL` to get
+past a guard that fires.

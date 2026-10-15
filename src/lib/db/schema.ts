@@ -6,17 +6,26 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
+
+import { user } from '@/lib/auth/schema';
+
+// Null is reserved for legacy/seed data awaiting explicit operator assignment.
+// Application reads never include unassigned rows.
+const owner = () =>
+  text('user_id').references(() => user.id, { onDelete: 'restrict' });
 
 export const GRADES = ['again', 'hard', 'good', 'easy'] as const;
 export const NOTE_KINDS = ['note', 'link'] as const;
 
 /**
- * Legacy grouping. Decks became tags in `add_notes_links_and_tags`, and nothing
+ * Legacy grouping. Decks became tags before the initial baseline, and nothing
  * new is filed under one; the table stays so old cards keep their history.
  */
 export const decks = sqliteTable('decks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: owner(),
   name: text('name').notNull(),
   description: text('description'),
   createdAt: integer('created_at', { mode: 'timestamp' })
@@ -28,6 +37,7 @@ export const cards = sqliteTable(
   'cards',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: owner(),
     deckId: integer('deck_id').references(() => decks.id, {
       onDelete: 'cascade',
     }),
@@ -53,7 +63,10 @@ export const cards = sqliteTable(
     // not an edit. `updateCard` sets it by hand, and nothing else touches it.
     updatedAt: integer('updated_at', { mode: 'timestamp' }),
   },
-  (table) => [index('cards_deck_id_due_at_idx').on(table.deckId, table.dueAt)],
+  (table) => [
+    index('cards_deck_id_due_at_idx').on(table.deckId, table.dueAt),
+    index('cards_user_due_idx').on(table.userId, table.dueAt),
+  ],
 );
 
 /**
@@ -89,25 +102,37 @@ export const reviews = sqliteTable(
  * markdown, a `link` is a URL with an optional title and note. They share a
  * table because they share every column but `url`.
  */
-export const notes = sqliteTable('notes', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  kind: text('kind', { enum: NOTE_KINDS }).notNull(),
-  title: text('title').notNull(),
-  body: text('body').notNull().default(''),
-  url: text('url'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }),
-});
+export const notes = sqliteTable(
+  'notes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: owner(),
+    kind: text('kind', { enum: NOTE_KINDS }).notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull().default(''),
+    url: text('url'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }),
+  },
+  (table) => [index('notes_user_idx').on(table.userId)],
+);
 
-export const tags = sqliteTable('tags', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull().unique(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
+export const tags = sqliteTable(
+  'tags',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: owner(),
+    name: text('name').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex('tags_user_name_unique').on(table.userId, table.name),
+  ],
+);
 
 export const cardTags = sqliteTable(
   'card_tags',

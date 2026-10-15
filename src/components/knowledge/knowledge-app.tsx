@@ -3,6 +3,7 @@
 import {
   IconBrain,
   IconFileText,
+  IconLogout,
   IconPlayerPlay,
   IconPlus,
   IconSearch,
@@ -11,6 +12,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from 'twenty-ui';
 
+import { signOut } from '@/app/sign-in/actions';
 import { domain, draftFrom, guessType } from '@/lib/knowledge/draft';
 import { startDrill, type Drill as DrillState } from '@/lib/knowledge/drill';
 import {
@@ -257,6 +259,13 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
           >
             New
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Sign out"
+            startIcon={<IconLogout size={14} />}
+            onClick={() => signOut()}
+          />
         </div>
       </header>
 

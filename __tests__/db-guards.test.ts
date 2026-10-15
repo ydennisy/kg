@@ -1,73 +1,40 @@
-import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   assertDatabaseMatchesEnvironment,
   assertDrizzleTargetIsSafe,
-  databaseFile,
-  isProductionDatabase,
-  PRODUCTION_DB_PATH,
+  isRemoteDatabase,
 } from '@/lib/db/config';
 
-const PROD = `file:./${PRODUCTION_DB_PATH}`;
 const DEV = 'file:./data/dev.db';
-const REMOTE = 'libsql://fcards-acme.turso.io';
+const PROD = 'libsql://fcards-acme.turso.io';
 
-describe('databaseFile', () => {
-  it('resolves a relative file: URL against the working directory', () => {
-    expect(databaseFile(DEV)).toBe(path.resolve('data/dev.db'));
-  });
-
-  it('accepts an absolute path', () => {
-    expect(databaseFile('file:/var/tmp/x.db')).toBe(
-      path.resolve('/var/tmp/x.db'),
-    );
-  });
-
-  it('drops libSQL connection options', () => {
-    expect(databaseFile(`${DEV}?mode=ro`)).toBe(path.resolve('data/dev.db'));
-  });
-
-  it('returns null for a remote database', () => {
-    expect(databaseFile(REMOTE)).toBeNull();
-  });
-});
-
-describe('isProductionDatabase', () => {
+describe('isRemoteDatabase', () => {
   it.each([
-    ['the plain relative path', PROD],
-    ['a path without the leading dot', 'file:data/prod.db'],
-    ['an absolute path', `file:${path.resolve(PRODUCTION_DB_PATH)}`],
-    ['a path that needs normalising', 'file:./data/../data/prod.db'],
-    ['a path with connection options', `${PROD}?mode=rw`],
-  ])('recognises production through %s', (_label, url) => {
-    expect(isProductionDatabase(url)).toBe(true);
+    ['a Turso URL', PROD],
+    ['an https URL', 'https://fcards-acme.turso.io'],
+  ])('treats %s as production', (_label, url) => {
+    expect(isRemoteDatabase(url)).toBe(true);
   });
 
   it.each([
-    ['the development database', DEV],
-    ['a backup', 'file:./data/backups/prod-2026-01-01.db'],
-    ['a lookalike name elsewhere', 'file:./prod.db'],
-    ['a remote database', REMOTE],
-  ])('does not mistake %s for production', (_label, url) => {
-    expect(isProductionDatabase(url)).toBe(false);
+    ['a relative file', DEV],
+    ['an absolute file', 'file:/var/tmp/x.db'],
+    ['a file with options', `${DEV}?mode=ro`],
+  ])('treats %s as local', (_label, url) => {
+    expect(isRemoteDatabase(url)).toBe(false);
   });
 });
 
 describe('assertDatabaseMatchesEnvironment', () => {
-  it('refuses to open production outside NODE_ENV=production', () => {
-    expect(() => assertDatabaseMatchesEnvironment(PROD, 'development')).toThrow(
-      /production database/,
-    );
-  });
-
-  it('refuses when NODE_ENV is unset, rather than assuming production', () => {
-    expect(() => assertDatabaseMatchesEnvironment(PROD, undefined)).toThrow();
-  });
-
-  it('refuses under the test environment too', () => {
-    expect(() => assertDatabaseMatchesEnvironment(PROD, 'test')).toThrow();
-  });
+  it.each(['development', 'test', undefined])(
+    'refuses production under NODE_ENV=%s',
+    (env) => {
+      expect(() => assertDatabaseMatchesEnvironment(PROD, env)).toThrow(
+        /Refusing to start/,
+      );
+    },
+  );
 
   it('allows production when production is what was asked for', () => {
     expect(() =>
@@ -75,35 +42,24 @@ describe('assertDatabaseMatchesEnvironment', () => {
     ).not.toThrow();
   });
 
-  it('leaves every other database alone', () => {
+  it('leaves a local file alone in every environment', () => {
     for (const env of ['development', 'test', 'production', undefined]) {
       expect(() => assertDatabaseMatchesEnvironment(DEV, env)).not.toThrow();
-      expect(() => assertDatabaseMatchesEnvironment(REMOTE, env)).not.toThrow();
     }
   });
 });
 
 describe('assertDrizzleTargetIsSafe', () => {
-  it('refuses push against production even when production was asked for', () => {
-    expect(() => assertDrizzleTargetIsSafe(PROD, 'production', 'push')).toThrow(
-      /Refusing to `drizzle-kit push`/,
-    );
-  });
-
   it('refuses push against production from any environment', () => {
-    for (const env of ['development', 'test', undefined]) {
-      expect(() => assertDrizzleTargetIsSafe(PROD, env, 'push')).toThrow();
+    for (const env of ['production', 'development', 'test', undefined]) {
+      expect(() => assertDrizzleTargetIsSafe(PROD, env, 'push')).toThrow(
+        /Refusing to `drizzle-kit push`/,
+      );
     }
   });
 
   it('refuses any command against production without NODE_ENV=production', () => {
-    for (const command of [
-      'migrate',
-      'generate',
-      'studio',
-      'drop',
-      undefined,
-    ]) {
+    for (const command of ['migrate', 'generate', 'studio', undefined]) {
       expect(() =>
         assertDrizzleTargetIsSafe(PROD, 'development', command),
       ).toThrow(/NODE_ENV is not "production"/);
@@ -116,7 +72,7 @@ describe('assertDrizzleTargetIsSafe', () => {
     ).not.toThrow();
   });
 
-  it('allows anything against development, push included', () => {
+  it('allows anything against a local file, push included', () => {
     for (const command of ['push', 'migrate', 'generate', 'studio']) {
       expect(() =>
         assertDrizzleTargetIsSafe(DEV, 'development', command),

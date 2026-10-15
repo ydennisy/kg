@@ -3,6 +3,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { refresh } from 'next/cache';
 
+import { requireUser } from '@/lib/auth';
 import { cards, cardTags, db, notes, noteTags, reviews, tags } from '@/lib/db';
 import {
   domain,
@@ -20,19 +21,19 @@ export type SaveResult =
   { ok: true; key: string } | { ok: false; error: string };
 
 /** Ids for these tag names, creating the ones that do not exist yet. */
-async function tagIds(names: string[]): Promise<number[]> {
+async function tagIds(userId: string, names: string[]): Promise<number[]> {
   const wanted = [...new Set(names.map(normalizeTag).filter(Boolean))];
   if (wanted.length === 0) {
     return [];
   }
   await db
     .insert(tags)
-    .values(wanted.map((name) => ({ name })))
+    .values(wanted.map((name) => ({ name, userId })))
     .onConflictDoNothing();
   const rows = await db
     .select({ id: tags.id })
     .from(tags)
-    .where(inArray(tags.name, wanted));
+    .where(and(eq(tags.userId, userId), inArray(tags.name, wanted)));
   return rows.map((row) => row.id);
 }
 
@@ -45,6 +46,7 @@ export async function saveItem(
   draft: ItemDraft,
   editing: { type: ItemType; id: number } | null = null,
 ): Promise<SaveResult> {
+  const user = await requireUser();
   const problem = draftProblem(draft);
   if (problem) {
     return { ok: false, error: problem };
@@ -53,7 +55,16 @@ export async function saveItem(
     return { ok: false, error: 'A card cannot become a note, or the reverse' };
   }
 
-  const ids = await tagIds(draft.tags);
+  // Check ownership before creating tags or changing any related rows.
+  if (editing) {
+    const table = editing.type === 'card' ? cards : notes;
+    const [existing] = await db
+      .select({ id: table.id })
+      .from(table)
+      .where(and(eq(table.id, editing.id), eq(table.userId, user.id)));
+    if (!existing) return { ok: false, error: 'Item not found' };
+  }
+  const ids = await tagIds(user.id, draft.tags);
   const now = new Date();
   let key: string;
 
@@ -68,12 +79,12 @@ export async function saveItem(
       await db
         .update(cards)
         .set({ ...text, updatedAt: now })
-        .where(eq(cards.id, cardId));
+        .where(and(eq(cards.id, cardId), eq(cards.userId, user.id)));
       await db.delete(cardTags).where(eq(cardTags.cardId, cardId));
     } else {
       [{ id: cardId }] = await db
         .insert(cards)
-        .values(text)
+        .values({ ...text, userId: user.id })
         .returning({ id: cards.id });
     }
     if (ids.length) {
@@ -102,12 +113,12 @@ export async function saveItem(
       await db
         .update(notes)
         .set({ ...values, updatedAt: now })
-        .where(eq(notes.id, noteId));
+        .where(and(eq(notes.id, noteId), eq(notes.userId, user.id)));
       await db.delete(noteTags).where(eq(noteTags.noteId, noteId));
     } else {
       [{ id: noteId }] = await db
         .insert(notes)
-        .values(values)
+        .values({ ...values, userId: user.id })
         .returning({ id: notes.id });
     }
     if (ids.length) {
@@ -121,36 +132,49 @@ export async function saveItem(
 }
 
 export async function deleteItem(type: ItemType, id: number) {
+  const user = await requireUser();
+  const table = type === 'card' ? cards : notes;
+  const [owned] = await db
+    .select({ id: table.id })
+    .from(table)
+    .where(and(eq(table.id, id), eq(table.userId, user.id)));
+  if (!owned) return;
   // The schema cascades these, but only on a connection with foreign keys
   // switched on — so the dependent rows go explicitly, in the same batch.
   if (type === 'card') {
     await db.batch([
       db.delete(reviews).where(eq(reviews.cardId, id)),
       db.delete(cardTags).where(eq(cardTags.cardId, id)),
-      db.delete(cards).where(eq(cards.id, id)),
+      db.delete(cards).where(and(eq(cards.id, id), eq(cards.userId, user.id))),
     ]);
   } else {
     const [note] = await db
       .select({ id: notes.id })
       .from(notes)
-      .where(and(eq(notes.id, id), eq(notes.kind, type)));
+      .where(
+        and(eq(notes.id, id), eq(notes.kind, type), eq(notes.userId, user.id)),
+      );
     if (!note) {
       return;
     }
     await db.batch([
       db.delete(noteTags).where(eq(noteTags.noteId, id)),
-      db.delete(notes).where(eq(notes.id, id)),
+      db.delete(notes).where(and(eq(notes.id, id), eq(notes.userId, user.id))),
     ]);
   }
   refresh();
 }
 
 export async function gradeCard(cardId: number, grade: Grade) {
+  const user = await requireUser();
   if (!Number.isInteger(cardId) || !GRADES.includes(grade)) {
     return;
   }
 
-  const [card] = await db.select().from(cards).where(eq(cards.id, cardId));
+  const [card] = await db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.id, cardId), eq(cards.userId, user.id)));
   if (!card) {
     return;
   }
@@ -159,7 +183,10 @@ export async function gradeCard(cardId: number, grade: Grade) {
 
   // Update current state and append to the history log atomically.
   await db.batch([
-    db.update(cards).set(next).where(eq(cards.id, cardId)),
+    db
+      .update(cards)
+      .set(next)
+      .where(and(eq(cards.id, cardId), eq(cards.userId, user.id))),
     db.insert(reviews).values({
       cardId,
       reviewedAt: next.lastReviewedAt,

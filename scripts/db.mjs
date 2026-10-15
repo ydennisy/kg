@@ -1,284 +1,43 @@
 #!/usr/bin/env node
 /**
- * Database maintenance: backups of production, and the commands that make the
- * development database disposable — seed it, reset it, or fill it with a copy
- * of production. Deliberately separate from the app and from drizzle-kit so
- * that the only tool allowed to write to production is a reviewed migration.
+ * The commands that make the development database disposable: seed it, or
+ * delete it so migrations can rebuild it. They only ever touch a local SQLite
+ * file — production is a hosted Turso database and is out of their reach.
  *
  * Usage: node scripts/db.mjs <command>
  */
 import { createClient } from '@libsql/client';
 import nextEnv from '@next/env'; // CommonJS: no named ESM exports
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 const { loadEnvConfig } = nextEnv;
 
-const BACKUP_DIR = path.resolve('data/backups');
-const PREFIX = 'prod-';
-const SUFFIX = '.db';
-
-const MINUTE = 60 * 1000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
 /**
- * Grandfather-father-son retention. A flat "keep the newest N" is the wrong
- * shape once backups are hourly: a day of them evicts every copy from before
- * the damage you have only just noticed. Each tier keeps the newest snapshot
- * per bucket, so recent history stays dense and old history stays reachable.
+ * The development database file. Refuses anything but a local `file:` URL, so
+ * a stray Turso URL in `.env.development.local` cannot be seeded over.
  */
-export const RETENTION = [
-  { label: 'hourly', within: 2 * DAY, bucket: HOUR },
-  { label: 'daily', within: 30 * DAY, bucket: DAY },
-  { label: 'weekly', within: Infinity, bucket: 7 * DAY },
-];
-
-/** Resolve DATABASE_URL for one environment, the same way Next.js would. */
-function databaseUrl(env) {
-  loadEnvConfig(process.cwd(), env === 'development', console, true);
+function developmentFile(what) {
+  loadEnvConfig(process.cwd(), true, console, true);
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error(`DATABASE_URL is not set for ${env}`);
-  return url;
-}
-
-/** The local file behind a `file:` URL — these tools are file-only. */
-function localFile(url, env) {
+  if (!url) throw new Error('DATABASE_URL is not set for development');
   if (!url.startsWith('file:')) {
     throw new Error(
-      `${env} is a remote database (${url.split('?')[0]}). This script only ` +
-        `handles local SQLite files; use the Turso CLI for a hosted database.`,
+      `Development points at a remote database (${url.split('?')[0]}). ` +
+        `Refusing to ${what} — these commands are for the local file only.`,
     );
   }
   return path.resolve(url.slice('file:'.length).split('?')[0]);
 }
 
-/**
- * `VACUUM INTO` rather than a file copy: it is SQLite's own online backup, so
- * it is consistent even if the production server is mid-write, and it leaves
- * no WAL/SHM sidecars behind.
- */
-async function snapshot(sourceUrl, destination) {
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.rmSync(destination, { force: true }); // VACUUM INTO refuses to overwrite
-  const client = createClient({ url: sourceUrl });
-  try {
-    await client.execute({ sql: 'VACUUM INTO ?', args: [destination] });
-  } finally {
-    client.close();
-  }
-}
-
-function size(file) {
-  return `${(fs.statSync(file).size / 1024).toFixed(0)} KB`;
-}
-
-function short(file) {
-  return path.relative(process.cwd(), file);
-}
-
-function ago(date) {
-  const minutes = Math.round((Date.now() - date.getTime()) / MINUTE);
-  if (minutes < 60) return `${minutes}m ago`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
-  return `${Math.round(minutes / (60 * 24))}d ago`;
-}
-
-async function backup() {
-  const url = databaseUrl('production');
-  const file = localFile(url, 'production');
-
-  if (!fs.existsSync(file)) {
-    console.log(`No production database at ${file} yet — nothing to back up.`);
-    return;
-  }
-
-  const label = process.argv[3];
-  const destination = path.join(BACKUP_DIR, snapshotName(new Date(), label));
-  await snapshot(url, destination);
-  await verify(destination);
-  console.log(
-    `Backed up production → ${short(destination)} (${size(destination)})`,
-  );
-
-  prune(BACKUP_DIR);
-  mirror(destination);
-}
-
-/**
- * `prod-2026-08-29T16-31-03-085Z.db`, or `…Z-before-migrate.db` when the
- * snapshot was taken to make a specific write undoable. ISO order is also
- * filename order, so sorting the directory sorts by time.
- */
-export function snapshotName(date, label) {
-  const stamp = date.toISOString().replace(/[:.]/g, '-');
-  return `${PREFIX}${stamp}${label ? `-${label}` : ''}${SUFFIX}`;
-}
-
-const NAME_PATTERN = new RegExp(
-  `^${PREFIX}(\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}-\\d{3}Z)(?:-([a-z-]+))?\\${SUFFIX}$`,
-);
-
-/** `{ at, label }` for a snapshot filename, or null if it is not one. */
-export function parseSnapshotName(name) {
-  const match = NAME_PATTERN.exec(name);
-  if (!match) return null;
-
-  // Undo the filename-safe substitutions: 2026-08-29T16-31-03-085Z.
-  const iso = match[1].replace(
-    /T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/,
-    'T$1:$2:$3.$4Z',
-  );
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return null;
-
-  return { at, label: match[2] };
-}
-
-/** Every snapshot in a directory, newest first. */
-export function snapshots(dir) {
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .map((name) => ({
-      name,
-      file: path.join(dir, name),
-      ...parseSnapshotName(name),
-    }))
-    .filter((entry) => entry.at)
-    .sort((a, b) => b.at - a.at);
-}
-
-/**
- * A backup nobody has opened is a rumour, not a backup. `integrity_check` is
- * cheap on files this size and catches a snapshot that copied badly.
- */
-async function verify(file) {
-  const client = createClient({ url: `file:${file}` });
-  try {
-    const { rows } = await client.execute('PRAGMA integrity_check');
-    const result = rows[0]?.integrity_check;
-    if (result !== 'ok') {
-      throw new Error(
-        `Snapshot ${short(file)} failed integrity_check: ${result}`,
-      );
-    }
-    const { rows: counts } = await client.execute(
-      'SELECT (SELECT count(*) FROM decks) AS decks,' +
-        ' (SELECT count(*) FROM cards) AS cards,' +
-        ' (SELECT count(*) FROM reviews) AS reviews',
-    );
-    return counts[0];
-  } finally {
-    client.close();
-  }
-}
-
-/** Delete the snapshots no retention tier claims. */
-export function prune(dir, now = Date.now()) {
-  const claimed = new Set();
-  const keep = new Set();
-
-  // Newest first, so the first snapshot to land in a bucket is the one kept.
-  for (const { name, at, label } of snapshots(dir)) {
-    // A labelled snapshot was taken to make one specific write undoable, so it
-    // outranks the schedule: an hourly backup half an hour after a migration
-    // must not be what evicts the copy from before that migration.
-    if (label) {
-      keep.add(name);
-      continue;
-    }
-
-    const age = now - at.getTime();
-    const tier = RETENTION.find((candidate) => age <= candidate.within);
-    const bucket = `${tier.label}:${Math.floor(at.getTime() / tier.bucket)}`;
-    if (claimed.has(bucket)) continue;
-    claimed.add(bucket);
-    keep.add(name);
-  }
-
-  const stale = snapshots(dir).filter(({ name }) => !keep.has(name));
-  for (const { file } of stale) fs.rmSync(file);
-  if (stale.length) {
-    console.log(`Pruned ${stale.length} snapshot(s) from ${short(dir)}.`);
-  }
-  return [...keep];
-}
-
-/**
- * The failure this does not otherwise survive is the disk. Set
- * BACKUP_MIRROR_DIR to somewhere that leaves the machine — an iCloud Drive or
- * Dropbox folder is enough — and every snapshot is copied there and pruned on
- * the same schedule. A mirror that is unavailable warns but never fails the
- * backup: the local copy has already been written.
- */
-function mirror(source) {
-  const configured = process.env.BACKUP_MIRROR_DIR;
-  if (!configured) return;
-
-  const dir = path.resolve(
-    configured.startsWith('~')
-      ? path.join(os.homedir(), configured.slice(1))
-      : configured,
-  );
-
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.copyFileSync(source, path.join(dir, path.basename(source)));
-    console.log(`Mirrored → ${dir}`);
-    prune(dir);
-  } catch (error) {
-    console.warn(
-      `Could not mirror to ${dir}: ${error.message}\n` +
-        'The local snapshot is fine; fix BACKUP_MIRROR_DIR when convenient.',
-    );
-  }
-}
-
-/**
- * Production → development only. There is no command for the other direction:
- * real data is promoted by using the app, never by overwriting the file.
- */
-async function cloneProd() {
-  const developmentFile = developmentTarget('clone');
-  const productionUrl = databaseUrl('production');
-
-  const temporary = `${developmentFile}.clone`;
-  await snapshot(productionUrl, temporary);
-  fs.renameSync(temporary, developmentFile);
-  for (const sidecar of ['-wal', '-shm']) {
-    fs.rmSync(`${developmentFile}${sidecar}`, { force: true });
-  }
-
-  console.log(
-    `Copied production → ${path.relative(process.cwd(), developmentFile)} (${size(developmentFile)})`,
-  );
-}
-
-/** Refuse to write anything but the development database. */
-function developmentTarget(what) {
-  const productionFile = localFile(databaseUrl('production'), 'production');
-  const developmentFile = localFile(databaseUrl('development'), 'development');
-
-  if (developmentFile === productionFile) {
-    throw new Error(
-      `Development and production resolve to the same file. Refusing to ${what}.`,
-    );
-  }
-
-  return developmentFile;
-}
-
 async function resetDev() {
-  const developmentFile = developmentTarget('reset');
+  const file = developmentFile('reset');
 
   for (const sidecar of ['', '-wal', '-shm']) {
-    fs.rmSync(`${developmentFile}${sidecar}`, { force: true });
+    fs.rmSync(`${file}${sidecar}`, { force: true });
   }
   console.log(
-    `Deleted ${path.relative(process.cwd(), developmentFile)} — run \`pnpm db:migrate\` to recreate it.`,
+    `Deleted ${path.relative(process.cwd(), file)} — run \`pnpm db:migrate\` to recreate it.`,
   );
 }
 
@@ -530,16 +289,16 @@ const NOTES = [
  * worth more than whatever was in there.
  */
 async function seed() {
-  const developmentFile = developmentTarget('seed');
+  const file = developmentFile('seed');
 
-  if (!fs.existsSync(developmentFile)) {
+  if (!fs.existsSync(file)) {
     throw new Error(
-      `No database at ${path.relative(process.cwd(), developmentFile)}. ` +
+      `No database at ${path.relative(process.cwd(), file)}. ` +
         'Run `pnpm db:migrate` first.',
     );
   }
 
-  const client = createClient({ url: `file:${developmentFile}` });
+  const client = createClient({ url: `file:${file}` });
   const now = Math.floor(Date.now() / 1000);
   const tagIds = new Map();
   let cardCount = 0;
@@ -625,112 +384,23 @@ async function seed() {
     (card) => card.due <= 0,
   );
   console.log(
-    `Seeded ${path.relative(process.cwd(), developmentFile)}: ` +
+    `Seeded ${path.relative(process.cwd(), file)}: ` +
       `${cardCount} cards, ${NOTES.length} notes and links, ` +
       `${tagIds.size} tags, ${due.length} due now.`,
   );
 }
 
-/** What is in the backup directory, newest first, with what each holds. */
-async function list() {
-  const found = snapshots(BACKUP_DIR);
-
-  if (found.length === 0) {
-    console.log(
-      `No snapshots in ${short(BACKUP_DIR)} yet. Run \`pnpm db:backup\`.`,
-    );
-    return;
-  }
-
-  console.log(
-    `${found.length} snapshot(s) in ${short(BACKUP_DIR)}, newest first:\n`,
-  );
-  for (const { name, file, at } of found) {
-    let contents;
-    try {
-      const counts = await verify(file);
-      contents = `${counts.decks} decks, ${counts.cards} cards, ${counts.reviews} reviews`;
-    } catch (error) {
-      contents = `UNREADABLE — ${error.message}`;
-    }
-    console.log(
-      `  ${name.slice(PREFIX.length, -SUFFIX.length)}  ` +
-        `${ago(at).padStart(8)}  ${size(file).padStart(8)}  ${contents}`,
-    );
-  }
-  console.log('\nRestore one with `pnpm db:restore <timestamp>`, or `latest`.');
-}
-
-/**
- * Puts a snapshot back. Safe to run wrong: the file being replaced is itself
- * snapshotted first, so a restore is undoable by another restore. Stop the
- * production server before running it — a live server holds an open handle to
- * the file being swapped out.
- */
-async function restore() {
-  const wanted = process.argv[3];
-
-  if (!wanted) {
-    throw new Error(
-      'Which snapshot? Pass a timestamp from `pnpm db:backups`, or `latest`.',
-    );
-  }
-
-  const found = snapshots(BACKUP_DIR);
-  const chosen =
-    wanted === 'latest'
-      ? found[0]
-      : found.find(({ name }) => name.includes(wanted));
-
-  if (!chosen) {
-    throw new Error(
-      `No snapshot matching "${wanted}". Run \`pnpm db:backups\` to see what there is.`,
-    );
-  }
-
-  // Read the snapshot before trusting it with the real file's place.
-  const incoming = await verify(chosen.file);
-
-  const productionFile = localFile(databaseUrl('production'), 'production');
-  if (fs.existsSync(productionFile)) {
-    const previous = path.join(
-      BACKUP_DIR,
-      snapshotName(new Date(), 'before-restore'),
-    );
-    await snapshot(`file:${productionFile}`, previous);
-    console.log(`Current production saved to ${short(previous)} first.`);
-  }
-
-  fs.copyFileSync(chosen.file, productionFile);
-  for (const sidecar of ['-wal', '-shm']) {
-    fs.rmSync(`${productionFile}${sidecar}`, { force: true });
-  }
-
-  console.log(
-    `Restored ${chosen.name} → ${short(productionFile)}: ` +
-      `${incoming.decks} decks, ${incoming.cards} cards, ${incoming.reviews} reviews.`,
-  );
-}
-
 const commands = {
-  backup,
-  list,
-  restore,
-  'clone-prod': cloneProd,
   'reset-dev': resetDev,
   seed,
 };
-// Only dispatch when run as a script — `__tests__/db-retention.test.ts`
-// imports this module for the retention policy.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  const command = commands[process.argv[2]];
+const command = commands[process.argv[2]];
 
-  if (!command) {
-    console.error(
-      `Usage: node scripts/db.mjs <${Object.keys(commands).join('|')}>`,
-    );
-    process.exit(1);
-  }
-
-  await command();
+if (!command) {
+  console.error(
+    `Usage: node scripts/db.mjs <${Object.keys(commands).join('|')}>`,
+  );
+  process.exit(1);
 }
+
+await command();

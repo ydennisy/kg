@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { cardTags, cards, db, notes, noteTags, tags } from '@/lib/db';
 import { renderMarkdown, toPlainText } from '@/lib/markdown';
@@ -26,18 +26,25 @@ function tagsBy(rows: { owner: number; name: string }[]) {
  * personal knowledge base is small enough that sending all of it beats a
  * round trip per keystroke, and it lets results update as you type.
  */
-export async function loadItems(now: Date = new Date()): Promise<Item[]> {
+export async function loadItems(
+  userId: string,
+  now: Date = new Date(),
+): Promise<Item[]> {
   const [cardRows, noteRows, cardTagRows, noteTagRows] = await Promise.all([
-    db.select().from(cards),
-    db.select().from(notes),
+    db.select().from(cards).where(eq(cards.userId, userId)),
+    db.select().from(notes).where(eq(notes.userId, userId)),
     db
       .select({ owner: cardTags.cardId, name: tags.name })
       .from(cardTags)
-      .innerJoin(tags, eq(tags.id, cardTags.tagId)),
+      .innerJoin(tags, eq(tags.id, cardTags.tagId))
+      .innerJoin(cards, eq(cards.id, cardTags.cardId))
+      .where(and(eq(cards.userId, userId), eq(tags.userId, userId))),
     db
       .select({ owner: noteTags.noteId, name: tags.name })
       .from(noteTags)
-      .innerJoin(tags, eq(tags.id, noteTags.tagId)),
+      .innerJoin(tags, eq(tags.id, noteTags.tagId))
+      .innerJoin(notes, eq(notes.id, noteTags.noteId))
+      .where(and(eq(notes.userId, userId), eq(tags.userId, userId))),
   ]);
 
   const cardTagNames = tagsBy(cardTagRows);
