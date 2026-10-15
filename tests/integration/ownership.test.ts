@@ -36,7 +36,7 @@ vi.mock('@/lib/db', async () => {
 import { db } from '@/lib/db';
 import { saveItem, deleteItem, gradeCard } from '@/app/actions';
 import { loadItems } from '@/lib/knowledge/load';
-import { assignOwner, importLegacy } from '../scripts/lib/ownership.mjs';
+import { assignOwner, importLegacy } from '../../scripts/lib/ownership.mjs';
 import type { ItemDraft } from '@/lib/knowledge/types';
 
 const client = db.$client;
@@ -189,7 +189,7 @@ describe('fresh baseline and legacy import', () => {
     const source = createClient({ url: `file:${directory}/source.db` });
     try {
       await source.executeMultiple(
-        readFileSync('__tests__/fixtures/legacy-schema.sql', 'utf8'),
+        readFileSync('tests/integration/fixtures/legacy-schema.sql', 'utf8'),
       );
       await source.executeMultiple(`
         INSERT INTO decks (id, name) VALUES (7, 'Legacy');
@@ -265,7 +265,7 @@ describe('fresh baseline and legacy import', () => {
     const source = createClient({ url: `file:${directory}/source.db` });
     try {
       await source.executeMultiple(
-        readFileSync('__tests__/fixtures/legacy-schema.sql', 'utf8'),
+        readFileSync('tests/integration/fixtures/legacy-schema.sql', 'utf8'),
       );
       await source.execute(
         "INSERT INTO decks (name) VALUES ('Must roll back')",

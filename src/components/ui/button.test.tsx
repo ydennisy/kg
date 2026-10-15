@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import { Plus } from 'lucide-react';
 import { expect, test } from 'vitest';

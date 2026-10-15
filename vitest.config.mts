@@ -7,7 +7,7 @@ export default defineConfig({
   // replaces the vite-tsconfig-paths plugin the Next.js docs still mention).
   resolve: { tsconfigPaths: true },
   test: {
-    environment: 'jsdom',
-    include: ['__tests__/**/*.test.{ts,tsx}'],
+    environment: 'node',
+    include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
   },
 });

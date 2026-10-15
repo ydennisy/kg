@@ -1,29 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import {
-  draftFrom,
-  draftProblem,
-  guessType,
-  normalizeTag,
-  normalizeUrl,
-} from '@/lib/knowledge/draft';
-import {
-  answer,
-  currentKey,
-  isFinished,
-  progress,
-  restart,
-  startDrill,
-} from '@/lib/knowledge/drill';
-import {
-  countByType,
-  highlight,
-  related,
-  search,
-  tagCounts,
-} from '@/lib/knowledge/search';
-import { tagColor } from '@/lib/knowledge/tag-color';
-import type { Item, ItemType } from '@/lib/knowledge/types';
+import { countByType, highlight, related, search, tagCounts } from './search';
+import type { Item, ItemType } from './types';
 
 let next = 0;
 function item(
@@ -127,61 +105,5 @@ describe('highlight', () => {
       { text: '(log', hit: true },
       { text: ' n)', hit: false },
     ]);
-  });
-});
-
-describe('drafts', () => {
-  test('guesses links, cards and notes', () => {
-    expect(guessType('https://example.com')).toBe('link');
-    expect(guessType('www.example.com/x')).toBe('link');
-    expect(guessType('what is a monad?')).toBe('card');
-    expect(guessType('shopping list')).toBe('note');
-  });
-
-  test('splits "question? answer" into a card', () => {
-    expect(draftFrom('card', 'What is 2+2? 4', ['math'])).toEqual({
-      type: 'card',
-      a: 'What is 2+2?',
-      b: '4',
-      c: '',
-      tags: ['math'],
-    });
-  });
-
-  test('says what is missing', () => {
-    expect(draftProblem(draftFrom('card', 'Front only?'))).toMatch(/both/);
-    expect(draftProblem(draftFrom('card', 'Q? A'))).toBeNull();
-    expect(draftProblem(draftFrom('link', 'not a url'))).toMatch(/URL/);
-  });
-
-  test('only accepts web URLs', () => {
-    expect(normalizeUrl('example.com/a')).toBe('https://example.com/a');
-    expect(normalizeUrl('javascript:alert(1)')).toBeNull();
-    expect(normalizeUrl('hello')).toBeNull();
-  });
-
-  test('normalizes tags', () => {
-    expect(normalizeTag(' #Linear Algebra ')).toBe('linear-algebra');
-  });
-
-  test('tag colours are stable', () => {
-    expect(tagColor('math')).toBe(tagColor('math'));
-  });
-});
-
-describe('drill', () => {
-  test('again sends a card to the back; the session ends once all are got', () => {
-    let drill = startDrill(['a', 'b'], 'Due');
-    expect(answer(drill, 'easy')).toBe(drill); // not revealed yet
-    drill = answer({ ...drill, shown: true }, 'again');
-    expect(drill.queue).toEqual(['a', 'b', 'a']);
-    expect(currentKey(drill)).toBe('b');
-    drill = answer({ ...drill, shown: true }, 'good');
-    expect(progress(drill).label).toBe('2 / 2');
-    drill = answer({ ...drill, shown: true }, 'good');
-    expect(isFinished(drill)).toBe(true);
-    expect(drill).toMatchObject({ got: 2, again: 1 });
-    expect(progress(drill).fraction).toBe(1);
-    expect(restart(drill)).toEqual(startDrill(['a', 'b'], 'Due'));
   });
 });

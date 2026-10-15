@@ -94,7 +94,7 @@ written as it does being reviewed.
 Untrusted-input handling lives in `src/lib/markdown.ts`: content is sanitized
 _before_ KaTeX and the highlighter run, so their generated markup never has to
 be waved through a sanitizer, and KaTeX runs with `trust: false` so `\href` and
-friends cannot emit links. `__tests__/markdown.test.ts` holds it to that.
+friends cannot emit links. `src/lib/markdown.test.ts` holds it to that.
 
 Cards are editable from the deck list and from the pencil in the top corner of a
 card mid-drill; editing returns you to whichever you came from. Editing sets
@@ -111,7 +111,7 @@ is not a review.
 So "is this production?" is "is this remote?" — a `file:` URL is development,
 anything else is production. Two guards in
 [`src/lib/db/config.ts`](src/lib/db/config.ts) hang off that, and
-[`__tests__/db-guards.test.ts`](__tests__/db-guards.test.ts) holds them to it:
+[`src/lib/db/config.test.ts`](src/lib/db/config.test.ts) holds them to it:
 
 **Development can't reach production.** The app refuses to start against a
 remote database unless `NODE_ENV` is `production`, and `drizzle.config.ts`
@@ -158,6 +158,10 @@ pnpm typecheck   # tsc --noEmit, on TypeScript 7
 pnpm lint        # eslint
 pnpm test        # vitest, watch mode
 ```
+
+Unit tests live beside the modules they test as `*.test.ts` / `*.test.tsx`.
+Cross-module database and ownership tests live in `tests/integration/`, with
+their fixtures. Vitest defaults to Node; component tests opt into jsdom.
 
 The two TypeScripts in `package.json` are not a mistake. TypeScript 7 is the
 native compiler and ships no JavaScript compiler API, which tools that
@@ -207,8 +211,8 @@ From a new card at the default ease, always answering **Good** gives 1, 3, 8,
 
 `review()` is pure: it takes the card's current state and returns the next one,
 with the clock passed in. That's what makes it testable
-([`__tests__/srs.test.ts`](__tests__/srs.test.ts)) and keeps the database out of
-the algorithm.
+([`src/lib/srs.test.ts`](src/lib/srs.test.ts)) and keeps the database out of the
+algorithm.
 
 ### What you get asked
 
