@@ -18,10 +18,7 @@
     "db:seed": "tsx scripts/db.ts seed",
     "db:migrate:prod": "NODE_ENV=production drizzle-kit migrate",
     "db:studio:prod": "NODE_ENV=production drizzle-kit studio",
-    "db:import-legacy": "tsx scripts/ownership.ts import",
-    "db:import-legacy:prod": "NODE_ENV=production tsx scripts/ownership.ts import",
-    "db:assign-owner": "tsx scripts/ownership.ts assign",
-    "db:assign-owner:prod": "NODE_ENV=production tsx scripts/ownership.ts assign"
+    "db:assign-owner": "tsx scripts/ownership.ts assign"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

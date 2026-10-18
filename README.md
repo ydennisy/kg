@@ -66,13 +66,12 @@ pnpm db:migrate                         # apply to dev.db first
 pnpm db:migrate:prod                    # then production
 ```
 
-| command                             | does                                      |
-| ----------------------------------- | ----------------------------------------- |
-| `pnpm db:studio[:prod]`             | browse the database (prod is editable)    |
-| `pnpm db:seed`                      | replace `dev.db`'s contents with samples  |
-| `pnpm db:reset`                     | rebuild `dev.db` from migrations and seed |
-| `pnpm db:assign-owner[:prod] <id>`  | attach unowned content to a user          |
-| `pnpm db:import-legacy[:prod] <db>` | copy a legacy database into a fresh one   |
+| command                     | does                                      |
+| --------------------------- | ----------------------------------------- |
+| `pnpm db:studio[:prod]`     | browse the database (prod is editable)    |
+| `pnpm db:seed`              | replace `dev.db`'s contents with samples  |
+| `pnpm db:reset`             | rebuild `dev.db` from migrations and seed |
+| `pnpm db:assign-owner <id>` | attach local sample content to a user     |
 
 Backups are Turso's point-in-time history, or
 `turso db shell <db> .dump > backup.sql`.
@@ -89,10 +88,7 @@ Deploys don't run migrations. Run `pnpm db:migrate:prod` from your machine
 before shipping code that needs them.
 
 `drizzle/0000_initial_schema.sql` is a squashed baseline — apply it only to a
-fresh database. To move a legacy collection into one: migrate the empty
-database, run `pnpm db:import-legacy:prod <source.db>` (read-only on the source,
-refuses a non-empty destination), sign in, then
-`pnpm db:assign-owner:prod <user-id>`.
+fresh database. The one-off legacy production import is complete.
 
 ## Rendering
 

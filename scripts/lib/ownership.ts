@@ -1,59 +1,5 @@
 import type { Client } from '@libsql/client';
 
-const contentTables = [
-  'decks',
-  'cards',
-  'notes',
-  'tags',
-  'reviews',
-  'card_tags',
-  'note_tags',
-] as const;
-
-/** Copy legacy content into a fresh baseline. Never copy auth or migration history.
- */
-export async function importLegacy(source: Client, target: Client) {
-  const read = await source.transaction('read');
-  const write = await target.transaction('write');
-  try {
-    for (const table of contentTables) {
-      const result = await write.execute(`SELECT count(*) AS n FROM ${table}`);
-      if (Number(result.rows[0].n))
-        throw new Error(
-          'Destination content must be empty; nothing was imported.',
-        );
-    }
-    const counts: Partial<Record<(typeof contentTables)[number], number>> = {};
-    for (const table of contentTables) {
-      const result = await read.execute(`SELECT * FROM ${table}`);
-      if (result.rows.some((row) => row.user_id != null)) {
-        throw new Error(
-          'Source contains owned data; this command only imports legacy collections.',
-        );
-      }
-      // Ownership is deliberately assigned separately, after GitHub sign-in.
-      const columns = result.columns.filter((column) => column !== 'user_id');
-      if (columns.some((column) => !/^[a-z_]+$/.test(column)))
-        throw new Error('Unexpected source column');
-      for (const row of result.rows) {
-        await write.execute({
-          sql: `INSERT INTO ${table} (${columns.map((column) => `"${column}"`).join(',')}) VALUES (${columns.map(() => '?').join(',')})`,
-          args: columns.map((column) => row[column]),
-        });
-      }
-      counts[table] = result.rows.length;
-    }
-    const violations = await write.execute('PRAGMA foreign_key_check');
-    if (violations.rows.length)
-      throw new Error('Imported data has broken references');
-    await write.commit();
-    return counts;
-  } finally {
-    read.close();
-    write.close();
-  }
-}
-
 /** Assign only unowned content to an existing GitHub user, atomically.
  */
 export async function assignOwner(client: Client, userId: string) {

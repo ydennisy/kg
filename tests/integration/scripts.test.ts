@@ -85,39 +85,6 @@ test('tsx seed, owner assignment and reset work on a scratch database', async ()
   expect(existsSync(file)).toBe(false);
 });
 
-test('tsx imports legacy content without changing the source', async () => {
-  const sourcePath = join(directory, 'legacy.db');
-  const targetPath = join(directory, 'target.db');
-  const source = createClient({ url: `file:${sourcePath}` });
-  const target = await baseline(targetPath);
-  writeFileSync(
-    join(directory, '.env.development'),
-    `DATABASE_URL=file:${targetPath}\n`,
-  );
-  try {
-    await source.executeMultiple(
-      readFileSync(
-        join(root, 'tests/integration/fixtures/legacy-schema.sql'),
-        'utf8',
-      ),
-    );
-    await source.execute(
-      "INSERT INTO cards (front, back) VALUES ('question', 'answer')",
-    );
-    const result = run('ownership.ts', 'import', sourcePath);
-    expect(result.status, result.stderr).toBe(0);
-    expect(
-      (await target.execute('SELECT front, user_id FROM cards')).rows,
-    ).toEqual([{ front: 'question', user_id: null }]);
-    expect((await source.execute('SELECT front FROM cards')).rows).toEqual([
-      { front: 'question' },
-    ]);
-  } finally {
-    source.close();
-    target.close();
-  }
-});
-
 test('tsx commands reject remote databases in development before connecting', () => {
   writeFileSync(
     join(directory, '.env.development'),
@@ -127,7 +94,6 @@ test('tsx commands reject remote databases in development before connecting', ()
     ['db.ts', 'seed'],
     ['db.ts', 'reset-dev'],
     ['ownership.ts', 'assign', 'owner'],
-    ['ownership.ts', 'import', 'legacy.db'],
   ]) {
     const result = run(args[0], ...args.slice(1));
     expect(result.status).toBe(1);

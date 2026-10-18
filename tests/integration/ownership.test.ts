@@ -36,7 +36,7 @@ vi.mock('@/lib/db', async () => {
 import { db } from '@/lib/db';
 import { saveItem, deleteItem, gradeCard } from '@/app/actions';
 import { loadItems } from '@/lib/knowledge/load';
-import { assignOwner, importLegacy } from '../../scripts/lib/ownership';
+import { assignOwner } from '../../scripts/lib/ownership';
 import type { ItemDraft } from '@/lib/knowledge/types';
 
 const client = db.$client;
@@ -160,7 +160,7 @@ describe('private collections through real SQL and server actions', () => {
   });
 });
 
-describe('fresh baseline and legacy import', () => {
+describe('fresh baseline and development seed ownership', () => {
   it('applies the single baseline through the migrator and can rerun it', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'kg-baseline-'));
     const fresh = createClient({ url: `file:${directory}/fresh.db` });
@@ -184,98 +184,30 @@ describe('fresh baseline and legacy import', () => {
     }
   });
 
-  it('preserves IDs, content, schedules and reviews; assigns explicitly and merges tags', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'kg-legacy-'));
-    const source = createClient({ url: `file:${directory}/source.db` });
-    try {
-      await source.executeMultiple(
-        readFileSync('tests/integration/fixtures/legacy-schema.sql', 'utf8'),
-      );
-      await source.executeMultiple(`
-        INSERT INTO decks (id, name) VALUES (7, 'Legacy');
-        INSERT INTO cards (id, deck_id, front, back, interval_raw, interval_days, reps) VALUES (8, 7, 'Old question', 'Old answer', 8.5, 9, 3);
-        INSERT INTO notes (id, kind, title, body) VALUES (9, 'note', 'Old note', 'Text');
-        INSERT INTO tags (id, name) VALUES (10, 'shared');
-        INSERT INTO card_tags VALUES (8, 10);
-        INSERT INTO note_tags VALUES (9, 10);
-        INSERT INTO reviews (id, card_id, grade, due_at, interval_raw, interval_days, ease_factor) VALUES (11, 8, 'good', 12345, 8.5, 9, 2.5);
-      `);
-      await source.executeMultiple(
-        'CREATE TABLE __drizzle_migrations (id integer); INSERT INTO __drizzle_migrations VALUES (1), (2), (3);',
-      );
-      const original = (await source.execute('SELECT * FROM cards')).rows[0];
-      const history = (await source.execute('SELECT * FROM reviews')).rows;
-      await importLegacy(source, client);
-      expect(
-        (
-          await client.execute(
-            "SELECT name FROM sqlite_master WHERE name = '__drizzle_migrations'",
-          )
-        ).rows,
-      ).toEqual([]);
-      expect(
-        (await client.execute('SELECT * FROM cards')).rows[0],
-      ).toMatchObject(original);
-      expect((await client.execute('SELECT * FROM reviews')).rows).toEqual(
-        history,
-      );
-      expect(await loadItems('alice')).toEqual([]);
-      expect(await loadItems('bob')).toEqual([]);
-      await gradeCard(8, 'again');
-      await deleteItem('card', 8);
-      expect(await saveItem(draft(), { type: 'card', id: 8 })).toEqual({
-        ok: false,
-        error: 'Item not found',
-      });
-      await expect(assignOwner(client, 'unknown')).rejects.toThrow(
-        'Sign in with GitHub',
-      );
-      await saveItem(draft()); // A duplicate tag name already owned by Alice.
-      await assignOwner(client, 'alice');
-      expect(await loadItems('alice')).toHaveLength(3);
-      expect(await loadItems('bob')).toEqual([]);
-      expect((await client.execute('SELECT * FROM reviews')).rows).toEqual(
-        history,
-      );
-      expect((await client.execute('SELECT * FROM tags')).rows).toHaveLength(1);
-      expect(
-        (await client.execute('SELECT user_id FROM decks')).rows[0].user_id,
-      ).toBe('alice');
-      const before = await snapshot();
-      await assignOwner(client, 'bob');
-      expect(await snapshot()).toEqual(before);
-      await expect(importLegacy(source, client)).rejects.toThrow(
-        'Destination content must be empty',
-      );
-      expect(await snapshot()).toEqual(before);
-      expect((await source.execute('SELECT * FROM cards')).rows[0]).toEqual(
-        original,
-      );
-      expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual(
-        [],
-      );
-    } finally {
-      source.close();
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
-
-  it('rolls back an import failure without leaving partial content', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'kg-legacy-'));
-    const source = createClient({ url: `file:${directory}/source.db` });
-    try {
-      await source.executeMultiple(
-        readFileSync('tests/integration/fixtures/legacy-schema.sql', 'utf8'),
-      );
-      await source.execute(
-        "INSERT INTO decks (name) VALUES ('Must roll back')",
-      );
-      await source.execute('DROP TABLE notes');
-      await expect(importLegacy(source, client)).rejects.toThrow();
-      expect((await client.execute('SELECT * FROM decks')).rows).toEqual([]);
-    } finally {
-      source.close();
-      rmSync(directory, { recursive: true, force: true });
-    }
+  it('assigns unowned seed content and merges tags without changing other owners', async () => {
+    await client.executeMultiple(`
+      INSERT INTO decks (id, name) VALUES (7, 'Sample');
+      INSERT INTO cards (id, deck_id, front, back) VALUES (8, 7, 'Question', 'Answer');
+      INSERT INTO notes (id, kind, title, body) VALUES (9, 'note', 'Sample note', 'Text');
+      INSERT INTO tags (id, name) VALUES (10, 'shared');
+      INSERT INTO card_tags VALUES (8, 10);
+      INSERT INTO note_tags VALUES (9, 10);
+    `);
+    expect(await loadItems('alice')).toEqual([]);
+    await expect(assignOwner(client, 'unknown')).rejects.toThrow(
+      'Sign in with GitHub',
+    );
+    await saveItem(draft());
+    await assignOwner(client, 'alice');
+    expect(await loadItems('alice')).toHaveLength(3);
+    expect(await loadItems('bob')).toEqual([]);
+    expect((await client.execute('SELECT * FROM tags')).rows).toHaveLength(1);
+    expect(
+      (await client.execute('SELECT user_id FROM decks')).rows[0].user_id,
+    ).toBe('alice');
+    const before = await snapshot();
+    await assignOwner(client, 'bob');
+    expect(await snapshot()).toEqual(before);
+    expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual([]);
   });
 });
