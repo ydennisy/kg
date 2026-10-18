@@ -17,6 +17,8 @@ function haystack(item: Item): string {
     item.title,
     item.type === 'card' ? '' : item.body,
     item.url ?? '',
+    item.type === 'link' ? item.summary : '',
+    item.type === 'link' ? item.keywords : '',
     item.tags.join(' '),
   ]
     .join(' ')

@@ -5,9 +5,10 @@ search screen, and flashcards come back on a spaced-repetition schedule.
 
 ## Using it
 
-- **Search everything.** The box searches titles, note bodies, URLs and tags as
-  you type, newest first. Card answers aren't searched, so a search doesn't give
-  them away. `/` focuses the box, `Enter` opens the top result, `Esc` clears it.
+- **Search everything.** The box searches titles, note bodies, link summaries,
+  keywords, URLs and tags as you type, newest first. Card answers aren't
+  searched, so a search doesn't give them away. `/` focuses the box, `Enter`
+  opens the top result, `Esc` clears it.
 - **Capture fast.** `⌘/Ctrl+Enter` turns whatever you typed into a new item. A
   URL becomes a link. `question? answer` becomes a card, split at the first `?`.
   Anything else becomes a note.
@@ -43,6 +44,30 @@ pnpm test        # vitest (test:run for a single pass)
 
 Unit tests sit beside their modules; cross-module tests live in
 `tests/integration/`.
+
+## Link enrichment
+
+Set `TAVILY_API_KEY` and `GROQ_API_KEY` in `.env.development.local` for local
+use, and in Vercel environment variables for production. Restart the dev server
+after changing keys. These are server-only secrets.
+
+New links and changed URLs use
+[Tavily Extract](https://docs.tavily.com/documentation/api-reference/endpoint/extract)
+then Groq's `openai/gpt-oss-20b` to create a short factual summary (up to 100
+words) and search keywords. Supplied titles are preserved; missing titles use
+extracted metadata, then fall back to the domain. Your note and tags remain
+separate. Summaries appear when opening links; summaries and keywords are
+searchable.
+
+Saving waits for this best-effort attempt (up to 7 seconds for extraction and 12
+seconds for summarisation). Missing keys, API errors and rate limits do not
+prevent saving. There are no automatic retries. Ordinary edits retain existing
+metadata; changing the URL replaces it. Existing links are not backfilled. Only
+the URL goes to Tavily; at most 12,000 characters of extracted page content plus
+its extracted title go to Groq. Personal notes and tags are not sent.
+
+Apply `0001_add_link_enrichment.sql` through `pnpm db:migrate` locally and
+`pnpm db:migrate:prod` before deploying this version.
 
 ## The two databases
 

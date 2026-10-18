@@ -12,6 +12,7 @@ import {
   normalizeUrl,
 } from '@/lib/knowledge/draft';
 import { itemKey, type ItemDraft, type ItemType } from '@/lib/knowledge/types';
+import { enrichLink } from '@/lib/links/enrich';
 import { normalizeMarkdown } from '@/lib/markdown';
 import { review, type Grade } from '@/lib/srs';
 
@@ -93,17 +94,35 @@ export async function saveItem(
     key = itemKey('card', cardId);
   } else {
     const url = draft.type === 'link' ? normalizeUrl(draft.a)! : null;
+    const [previous] = editing
+      ? await db
+          .select()
+          .from(notes)
+          .where(and(eq(notes.id, editing.id), eq(notes.userId, user.id)))
+      : [];
+    const metadata =
+      url && (previous?.kind !== 'link' || previous.url !== url)
+        ? await enrichLink(url)
+        : {
+            title: '',
+            summary: previous?.summary ?? '',
+            keywords: previous?.keywords ?? '',
+          };
     const values =
       draft.type === 'link'
         ? {
             kind: 'link' as const,
             url,
-            title: draft.b.trim() || domain(url!),
+            title: draft.b.trim() || metadata.title || domain(url!),
+            summary: metadata.summary,
+            keywords: metadata.keywords,
             body: normalizeMarkdown(draft.c),
           }
         : {
             kind: 'note' as const,
             url: null,
+            summary: '',
+            keywords: '',
             title: draft.a.trim(),
             body: normalizeMarkdown(draft.b),
           };

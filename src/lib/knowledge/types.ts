@@ -13,6 +13,8 @@ export type Item = {
   /** Plain text, for search, highlighting and lists. */
   title: string;
   body: string;
+  summary: string;
+  keywords: string;
   /** The stored markdown, for the editor. */
   titleMarkdown: string;
   bodyMarkdown: string;

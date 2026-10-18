@@ -178,6 +178,18 @@ export function ItemView({
           />
         )}
 
+        {item.type === 'link' && item.summary && (
+          <div style={{ color: 'var(--t-font-color-secondary)' }}>
+            <p
+              className="mb-1 text-xs"
+              style={{ color: 'var(--t-font-color-tertiary)' }}
+            >
+              Summary
+            </p>
+            <p className="leading-relaxed">{item.summary}</p>
+          </div>
+        )}
+
         {item.bodyHtml &&
           (hidden ? (
             <button

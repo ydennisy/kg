@@ -18,6 +18,8 @@ function item(
     type,
     title,
     body,
+    summary: '',
+    keywords: '',
     titleMarkdown: title,
     bodyMarkdown: body,
     titleHtml: '',

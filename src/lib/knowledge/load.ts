@@ -58,6 +58,8 @@ export async function loadItems(
       type: 'card',
       title: toPlainText(card.front),
       body: toPlainText(card.back),
+      summary: '',
+      keywords: '',
       titleMarkdown: card.front,
       bodyMarkdown: card.back,
       titleHtml: renderMarkdown(card.front),
@@ -79,6 +81,8 @@ export async function loadItems(
       // Titles are plain text; only the body is markdown.
       title: note.title,
       body: toPlainText(note.body),
+      summary: note.summary,
+      keywords: note.keywords,
       titleMarkdown: note.title,
       bodyMarkdown: note.body,
       titleHtml: '',

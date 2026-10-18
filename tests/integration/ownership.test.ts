@@ -16,6 +16,13 @@ vi.mock('@/lib/auth', () => ({
     return { id: identity.id };
   },
 }));
+vi.mock('@/lib/links/enrich', () => ({
+  enrichLink: vi.fn(async () => ({
+    title: 'Extracted title',
+    summary: 'Explains associative memory.',
+    keywords: 'retrieval cognition',
+  })),
+}));
 vi.mock('next/cache', () => ({ refresh: vi.fn() }));
 vi.mock('@/lib/db', async () => {
   const { createClient } = await import('@libsql/client');
@@ -33,6 +40,8 @@ vi.mock('@/lib/db', async () => {
   };
 });
 
+import { enrichLink } from '@/lib/links/enrich';
+import { search } from '@/lib/knowledge/search';
 import { db } from '@/lib/db';
 import { saveItem, deleteItem, gradeCard } from '@/app/actions';
 import { loadItems } from '@/lib/knowledge/load';
@@ -53,6 +62,7 @@ const draft = (
 });
 
 beforeEach(async () => {
+  vi.mocked(enrichLink).mockClear();
   identity.id = 'alice';
   identity.signedIn = true;
   await client.execute('PRAGMA foreign_keys = OFF');
@@ -62,6 +72,9 @@ beforeEach(async () => {
   for (const row of tables.rows)
     await client.execute(`DROP TABLE "${row.name}"`);
   await client.executeMultiple(baseline);
+  await client.executeMultiple(
+    readFileSync('drizzle/0001_add_link_enrichment.sql', 'utf8'),
+  );
   await client.execute('PRAGMA foreign_keys = ON');
   for (const id of ['alice', 'bob']) {
     await client.execute({
@@ -161,7 +174,29 @@ describe('private collections through real SQL and server actions', () => {
 });
 
 describe('fresh baseline and development seed ownership', () => {
-  it('applies the single baseline through the migrator and can rerun it', async () => {
+  it('preserves existing links when adding enrichment columns', async () => {
+    const legacy = createClient({ url: ':memory:' });
+    try {
+      await legacy.executeMultiple(baseline);
+      await legacy.executeMultiple(`
+        INSERT INTO notes (id, kind, title, body, url)
+        VALUES (1, 'link', 'Saved title', 'Personal note', 'https://example.com');
+      `);
+      const before = (await legacy.execute('SELECT * FROM notes')).rows[0];
+      await legacy.executeMultiple(
+        readFileSync('drizzle/0001_add_link_enrichment.sql', 'utf8'),
+      );
+      expect((await legacy.execute('SELECT * FROM notes')).rows[0]).toEqual({
+        ...before,
+        summary: '',
+        keywords: '',
+      });
+    } finally {
+      legacy.close();
+    }
+  });
+
+  it('applies all migrations through the migrator and can rerun them', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'kg-baseline-'));
     const fresh = createClient({ url: `file:${directory}/fresh.db` });
     try {
@@ -172,7 +207,7 @@ describe('fresh baseline and development seed ownership', () => {
       await migrate(database, { migrationsFolder: 'drizzle' });
       expect(
         (await fresh.execute('SELECT * FROM __drizzle_migrations')).rows,
-      ).toHaveLength(1);
+      ).toHaveLength(2);
       expect(
         (await fresh.execute('PRAGMA table_info(cards)')).rows.map(
           (row) => row.name,
@@ -209,5 +244,63 @@ describe('fresh baseline and development seed ownership', () => {
     await assignOwner(client, 'bob');
     expect(await snapshot()).toEqual(before);
     expect((await client.execute('PRAGMA foreign_key_check')).rows).toEqual([]);
+  });
+});
+
+describe('link enrichment through save and search', () => {
+  it('fills missing titles, preserves notes and finds summary/keywords', async () => {
+    await saveItem({ ...draft('link'), b: '', c: 'My own note' });
+    const items = await loadItems('alice');
+    expect(items[0]).toMatchObject({
+      title: 'Extracted title',
+      bodyMarkdown: 'My own note',
+      summary: 'Explains associative memory.',
+      keywords: 'retrieval cognition',
+    });
+    expect(
+      search(items, { query: 'associative memory', tag: null }),
+    ).toHaveLength(1);
+    expect(search(items, { query: 'cognition', tag: null })).toHaveLength(1);
+    expect(await loadItems('bob')).toEqual([]);
+  });
+  it('preserves supplied titles, avoids refetch on edits and clears stale metadata on URL change failure', async () => {
+    await saveItem(draft('link'));
+    const [item] = await loadItems('alice');
+    expect(item.title).toBe('Private body');
+    await saveItem(
+      { ...draft('link'), c: 'Edited note' },
+      { type: 'link', id: item.id },
+    );
+    expect(enrichLink).toHaveBeenCalledTimes(1);
+    vi.mocked(enrichLink).mockResolvedValueOnce({
+      title: '',
+      summary: '',
+      keywords: '',
+    });
+    await saveItem(
+      { ...draft('link'), a: 'https://example.org', b: '' },
+      { type: 'link', id: item.id },
+    );
+    expect((await loadItems('alice'))[0]).toMatchObject({
+      title: 'example.org',
+      summary: '',
+      keywords: '',
+    });
+  });
+  it('does not enrich unauthorized edits and clears metadata when converted to a note', async () => {
+    await saveItem(draft('link'));
+    const [item] = await loadItems('alice');
+    identity.id = 'bob';
+    expect(
+      await saveItem(draft('link'), { type: 'link', id: item.id }),
+    ).toEqual({ ok: false, error: 'Item not found' });
+    expect(enrichLink).toHaveBeenCalledTimes(1);
+    identity.id = 'alice';
+    await saveItem(draft('note'), { type: 'link', id: item.id });
+    expect((await loadItems('alice'))[0]).toMatchObject({
+      type: 'note',
+      summary: '',
+      keywords: '',
+    });
   });
 });

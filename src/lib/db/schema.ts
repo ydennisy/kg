@@ -111,6 +111,8 @@ export const notes = sqliteTable(
     title: text('title').notNull(),
     body: text('body').notNull().default(''),
     url: text('url'),
+    summary: text('summary').notNull().default(''),
+    keywords: text('keywords').notNull().default(''),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
