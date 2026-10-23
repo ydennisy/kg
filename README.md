@@ -53,8 +53,10 @@ after changing keys. These are server-only secrets.
 
 New links and changed URLs use
 [Tavily Extract](https://docs.tavily.com/documentation/api-reference/endpoint/extract)
-then Groq's `openai/gpt-oss-20b` to create a short factual summary (up to 100
-words) and search keywords. Supplied titles are preserved; missing titles use
+then Groq's `qwen/qwen3.8-27b` to create a short factual summary (2–3 sentences,
+up to 65 words) of the topic itself: what it is and its key mechanisms, findings
+or arguments, rather than a description of what the page covers. It also
+generates search keywords. Supplied titles are preserved; missing titles use
 extracted metadata, then fall back to the domain. Your note and tags remain
 separate. Summaries appear when opening links; summaries and keywords are
 searchable.
