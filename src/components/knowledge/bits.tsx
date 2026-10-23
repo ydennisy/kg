@@ -1,10 +1,11 @@
 'use client';
 
-import { IconBrain, IconFileText, IconLink } from '@tabler/icons-react';
+import { IconBrain, IconFileText, IconLink, IconX } from '@tabler/icons-react';
 import { Tag } from 'twenty-ui';
 
 import { highlight } from '@/lib/knowledge/search';
 import { tagColor } from '@/lib/knowledge/tag-color';
+import { leaf, parentOf, rootOf, SEPARATOR } from '@/lib/knowledge/tags';
 import type { ItemType } from '@/lib/knowledge/types';
 
 export const TYPES: Record<
@@ -75,21 +76,55 @@ export function TypeTile({
   );
 }
 
+/**
+ * A tag, coloured by the top of its branch so a whole branch reads as one.
+ * Its parents show faintly before its own name, unless `short` says the
+ * context already gives them; `nested` marks a tag with more inside.
+ */
 export function TagChip({
   name,
   count,
   variant = 'soft',
+  short = false,
+  nested = false,
   onPick,
+  onRemove,
 }: {
   name: string;
   count?: number;
   variant?: 'soft' | 'outline';
+  short?: boolean;
+  nested?: boolean;
   onPick?: (name: string) => void;
+  onRemove?: () => void;
 }) {
+  const parent = parentOf(name);
   const tag = (
-    <Tag color={tagColor(name)} variant={variant}>
-      {name}
-      {count !== undefined && ` ${count}`}
+    <Tag color={tagColor(rootOf(name))} variant={variant}>
+      {parent && !short && (
+        <span style={{ opacity: 0.6 }}>
+          {parent}
+          {SEPARATOR}
+        </span>
+      )}
+      {leaf(name)}
+      {count !== undefined && <span style={{ opacity: 0.7 }}> {count}</span>}
+      {nested && (
+        <span aria-label="has nested tags" style={{ opacity: 0.55 }}>
+          {' '}
+          ›
+        </span>
+      )}
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={`Remove ${name}`}
+          className="-mr-0.5 ml-1 inline-flex cursor-pointer align-middle opacity-60 hover:opacity-100"
+          onClick={onRemove}
+        >
+          <IconX size={10} />
+        </button>
+      )}
     </Tag>
   );
   if (!onPick) {

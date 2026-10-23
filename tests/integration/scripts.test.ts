@@ -2,6 +2,7 @@ import { createClient } from '@libsql/client';
 import { spawnSync } from 'node:child_process';
 import {
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -46,9 +47,13 @@ function run(script: string, ...args: string[]) {
 
 async function baseline(file: string) {
   const client = createClient({ url: `file:${file}` });
-  await client.executeMultiple(
-    readFileSync(join(root, 'drizzle/0000_initial_schema.sql'), 'utf8'),
-  );
+  for (const migration of readdirSync(join(root, 'drizzle'))
+    .filter((name) => name.endsWith('.sql'))
+    .sort()) {
+    await client.executeMultiple(
+      readFileSync(join(root, 'drizzle', migration), 'utf8'),
+    );
+  }
   return client;
 }
 

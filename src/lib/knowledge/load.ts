@@ -1,8 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { cardTags, cards, db, notes, noteTags, tags } from '@/lib/db';
 import { renderMarkdown, toPlainText } from '@/lib/markdown';
 
+import { tagPaths, withoutImplied } from './tags';
 import { itemKey, type Item } from './types';
 
 const dateFormat = new Intl.DateTimeFormat('en-US', {
@@ -10,13 +11,19 @@ const dateFormat = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
-function tagsBy(rows: { owner: number; name: string }[]) {
+function tagsBy(
+  rows: { owner: number; tagId: number }[],
+  paths: Map<number, string>,
+) {
   const byOwner = new Map<number, string[]>();
-  for (const { owner, name } of rows) {
-    byOwner.set(owner, [...(byOwner.get(owner) ?? []), name]);
+  for (const { owner, tagId } of rows) {
+    const path = paths.get(tagId);
+    if (path) {
+      byOwner.set(owner, [...(byOwner.get(owner) ?? []), path]);
+    }
   }
-  for (const names of byOwner.values()) {
-    names.sort();
+  for (const [owner, names] of byOwner) {
+    byOwner.set(owner, withoutImplied(names));
   }
   return byOwner;
 }
@@ -30,25 +37,30 @@ export async function loadItems(
   userId: string,
   now: Date = new Date(),
 ): Promise<Item[]> {
-  const [cardRows, noteRows, cardTagRows, noteTagRows] = await Promise.all([
-    db.select().from(cards).where(eq(cards.userId, userId)),
-    db.select().from(notes).where(eq(notes.userId, userId)),
-    db
-      .select({ owner: cardTags.cardId, name: tags.name })
-      .from(cardTags)
-      .innerJoin(tags, eq(tags.id, cardTags.tagId))
-      .innerJoin(cards, eq(cards.id, cardTags.cardId))
-      .where(and(eq(cards.userId, userId), eq(tags.userId, userId))),
-    db
-      .select({ owner: noteTags.noteId, name: tags.name })
-      .from(noteTags)
-      .innerJoin(tags, eq(tags.id, noteTags.tagId))
-      .innerJoin(notes, eq(notes.id, noteTags.noteId))
-      .where(and(eq(notes.userId, userId), eq(tags.userId, userId))),
-  ]);
+  const [cardRows, noteRows, tagRows, cardTagRows, noteTagRows] =
+    await Promise.all([
+      db.select().from(cards).where(eq(cards.userId, userId)),
+      db.select().from(notes).where(eq(notes.userId, userId)),
+      db
+        .select({ id: tags.id, parentId: tags.parentId, name: tags.name })
+        .from(tags)
+        .where(eq(tags.userId, userId)),
+      db
+        .select({ owner: cardTags.cardId, tagId: cardTags.tagId })
+        .from(cardTags)
+        .innerJoin(cards, eq(cards.id, cardTags.cardId))
+        .where(eq(cards.userId, userId)),
+      db
+        .select({ owner: noteTags.noteId, tagId: noteTags.tagId })
+        .from(noteTags)
+        .innerJoin(notes, eq(notes.id, noteTags.noteId))
+        .where(eq(notes.userId, userId)),
+    ]);
 
-  const cardTagNames = tagsBy(cardTagRows);
-  const noteTagNames = tagsBy(noteTagRows);
+  // Only this user's tags have paths, so a link to anyone else's drops out.
+  const paths = tagPaths(tagRows);
+  const cardTagNames = tagsBy(cardTagRows, paths);
+  const noteTagNames = tagsBy(noteTagRows, paths);
 
   const fromCards = cardRows.map((card): Item => {
     const touched = card.updatedAt ?? card.createdAt;

@@ -5,7 +5,7 @@ import { Button } from 'twenty-ui';
 
 import { saveItem } from '@/app/actions';
 import { CardEditor } from '@/components/card-editor';
-import { draftProblem, normalizeTag } from '@/lib/knowledge/draft';
+import { draftProblem } from '@/lib/knowledge/draft';
 import {
   ITEM_TYPES,
   type ItemDraft,
@@ -13,6 +13,7 @@ import {
 } from '@/lib/knowledge/types';
 
 import { TYPES, TypeIcon } from './bits';
+import { TagInput } from './tag-input';
 
 const FIELDS: Record<
   ItemType,
@@ -79,7 +80,6 @@ export function Composer({
   onSaved: (key: string) => void;
 }) {
   const [draft, setDraft] = useState(initial);
-  const [newTag, setNewTag] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
   const firstField = useRef<HTMLTextAreaElement & HTMLInputElement>(null);
@@ -141,13 +141,6 @@ export function Composer({
   }, [draft.type]);
 
   const fields = FIELDS[draft.type];
-  const tagChoices = [...new Set([...knownTags, ...draft.tags])];
-  const toggleTag = (name: string) =>
-    set({
-      tags: draft.tags.includes(name)
-        ? draft.tags.filter((tag) => tag !== name)
-        : [...draft.tags, name],
-    });
 
   return (
     <>
@@ -301,65 +294,11 @@ export function Composer({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5 px-5 pt-1 pb-4">
-          <span
-            className="mr-1"
-            style={{
-              fontSize: 'var(--t-font-size-xs)',
-              color: 'var(--t-font-color-tertiary)',
-            }}
-          >
-            Tags
-          </span>
-          {tagChoices.map((name) => {
-            const on = draft.tags.includes(name);
-            return (
-              <button
-                key={name}
-                type="button"
-                onClick={() => toggleTag(name)}
-                className="flex h-6 items-center rounded-md px-2"
-                style={{
-                  fontSize: 'var(--t-font-size-sm)',
-                  background: on
-                    ? 'var(--t-background-inverted-primary)'
-                    : 'transparent',
-                  color: on
-                    ? 'var(--t-font-color-inverted)'
-                    : 'var(--t-font-color-secondary)',
-                  border: `1px solid ${
-                    on
-                      ? 'var(--t-background-inverted-primary)'
-                      : 'var(--t-border-color-medium)'
-                  }`,
-                }}
-              >
-                {name}
-              </button>
-            );
-          })}
-          <input
-            value={newTag}
-            onChange={(event) => setNewTag(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
-                event.preventDefault();
-                const name = normalizeTag(newTag);
-                if (name && !draft.tags.includes(name)) {
-                  set({ tags: [...draft.tags, name] });
-                }
-                setNewTag('');
-              }
-            }}
-            placeholder="+ new tag"
-            className="h-6 w-24 rounded-md px-2"
-            style={{
-              ...plainInput,
-              width: 96,
-              padding: '0 8px',
-              fontSize: 'var(--t-font-size-sm)',
-              border: '1px dashed var(--t-border-color-medium)',
-            }}
+        <div className="px-5 pt-1 pb-4">
+          <TagInput
+            tags={draft.tags}
+            known={knownTags}
+            onChange={(tags) => set({ tags })}
           />
         </div>
 

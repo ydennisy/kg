@@ -16,8 +16,9 @@ export async function assignOwner(client: Client, userId: string) {
       'SELECT id, name FROM tags WHERE user_id IS NULL',
     );
     for (const tag of legacyTags.rows) {
+      // Legacy tags are flat, so only a top-level tag can be their twin.
       const existing = await tx.execute({
-        sql: 'SELECT id FROM tags WHERE user_id = ? AND name = ?',
+        sql: 'SELECT id FROM tags WHERE user_id = ? AND name = ? AND parent_id IS NULL',
         args: [userId, tag.name],
       });
       if (existing.rows.length) {

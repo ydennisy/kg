@@ -43,7 +43,7 @@ vi.mock('@/lib/db', async () => {
 import { enrichLink } from '@/lib/links/enrich';
 import { search } from '@/lib/knowledge/search';
 import { db } from '@/lib/db';
-import { saveItem, deleteItem, gradeCard } from '@/app/actions';
+import { saveItem, deleteItem, gradeCard, renameTag } from '@/app/actions';
 import { loadItems } from '@/lib/knowledge/load';
 import { assignOwner } from '../../scripts/lib/ownership';
 import type { ItemDraft } from '@/lib/knowledge/types';
@@ -72,9 +72,14 @@ beforeEach(async () => {
   for (const row of tables.rows)
     await client.execute(`DROP TABLE "${row.name}"`);
   await client.executeMultiple(baseline);
-  await client.executeMultiple(
-    readFileSync('drizzle/0001_add_link_enrichment.sql', 'utf8'),
-  );
+  for (const migration of [
+    '0001_add_link_enrichment',
+    '0002_add_tag_parents',
+  ]) {
+    await client.executeMultiple(
+      readFileSync(`drizzle/${migration}.sql`, 'utf8'),
+    );
+  }
   await client.execute('PRAGMA foreign_keys = ON');
   for (const id of ['alice', 'bob']) {
     await client.execute({
@@ -207,7 +212,7 @@ describe('fresh baseline and development seed ownership', () => {
       await migrate(database, { migrationsFolder: 'drizzle' });
       expect(
         (await fresh.execute('SELECT * FROM __drizzle_migrations')).rows,
-      ).toHaveLength(2);
+      ).toHaveLength(3);
       expect(
         (await fresh.execute('PRAGMA table_info(cards)')).rows.map(
           (row) => row.name,
@@ -302,5 +307,86 @@ describe('link enrichment through save and search', () => {
       summary: '',
       keywords: '',
     });
+  });
+});
+
+describe('nested tags through real SQL', () => {
+  const tagRows = async () =>
+    (
+      await client.execute(
+        'SELECT id, parent_id, name, user_id FROM tags ORDER BY id',
+      )
+    ).rows.map((row) => ({ ...row }));
+  const tagsOf = async (who = 'alice') =>
+    (await loadItems(who)).map((item) => item.tags);
+
+  it('saves a path as a chain of tags, sharing parents and dropping implied ones', async () => {
+    await saveItem(draft('card', ['Programming/Databases', 'programming']));
+    await saveItem(draft('note', ['programming/closures']));
+    expect(await tagRows()).toEqual([
+      { id: 1, parent_id: null, name: 'programming', user_id: 'alice' },
+      { id: 2, parent_id: 1, name: 'databases', user_id: 'alice' },
+      { id: 3, parent_id: 1, name: 'closures', user_id: 'alice' },
+    ]);
+    expect(await tagsOf()).toEqual([
+      ['programming/databases'],
+      ['programming/closures'],
+    ]);
+    expect(
+      search(await loadItems('alice'), { query: '', tag: 'programming' }),
+    ).toHaveLength(2);
+  });
+
+  it('allows the same name in different branches', async () => {
+    await saveItem(draft('card', ['rust/closures', 'programming/closures']));
+    expect((await tagsOf())[0]).toEqual([
+      'programming/closures',
+      'rust/closures',
+    ]);
+  });
+
+  it('renames and moves a branch with everything under it', async () => {
+    await saveItem(draft('card', ['programming/databases/sqlite']));
+    expect(await renameTag('programming/databases', 'data/stores')).toEqual({
+      ok: true,
+      path: 'data/stores',
+    });
+    expect(await tagsOf()).toEqual([['data/stores/sqlite']]);
+    expect(await renameTag('data', 'data/inside')).toEqual({
+      ok: false,
+      error: 'A tag cannot move inside itself',
+    });
+  });
+
+  it('merges into a tag that already exists, children included', async () => {
+    await saveItem(draft('card', ['db/sqlite', 'rl']));
+    await saveItem(draft('note', ['programming/databases/sqlite']));
+    await saveItem(draft('link', ['programming/databases/postgres']));
+    expect(await renameTag('db', 'programming/databases')).toMatchObject({
+      ok: true,
+    });
+    expect(await tagsOf()).toEqual([
+      ['programming/databases/sqlite', 'rl'],
+      ['programming/databases/sqlite'],
+      ['programming/databases/postgres'],
+    ]);
+    const names = (await tagRows()).map((row) => row.name).sort();
+    expect(names).toEqual([
+      'databases',
+      'postgres',
+      'programming',
+      'rl',
+      'sqlite',
+    ]);
+  });
+
+  it("cannot rename another user's tag", async () => {
+    await saveItem(draft('card', ['secret']));
+    identity.id = 'bob';
+    expect(await renameTag('secret', 'mine')).toEqual({
+      ok: false,
+      error: 'Tag not found',
+    });
+    expect((await tagRows())[0].name).toBe('secret');
   });
 });

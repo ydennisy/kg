@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'vitest';
 
-import { countByType, highlight, related, search, tagCounts } from './search';
+import {
+  branchCounts,
+  countByType,
+  highlight,
+  knownTags,
+  related,
+  search,
+  tagCounts,
+} from './search';
 import type { Item, ItemType } from './types';
 
 let next = 0;
@@ -89,6 +97,67 @@ describe('search', () => {
     expect(related(chapter, items, { limit: 5, cards: false })).toEqual([
       video,
     ]);
+  });
+});
+
+describe('nested tags', () => {
+  const fk = item('card', 'What is a foreign key?', '', [
+    'programming/databases',
+  ]);
+  const pushdown = item('card', 'What is predicate pushdown?', '', [
+    'programming/databases/datafusion',
+  ]);
+  const closure = item('card', 'What is a closure?', '', [
+    'programming/closures',
+  ]);
+  const ddd = item('card', 'What is a bounded context?', '', ['programming']);
+  const rl = item('card', 'What does S_t mean?', '', [
+    'reinforcement-learning',
+  ]);
+  const nested = [fk, pushdown, closure, ddd, rl];
+
+  test('a parent tag finds everything in its branch', () => {
+    expect(search(nested, { query: '', tag: 'programming' })).toEqual([
+      ddd,
+      closure,
+      pushdown,
+      fk,
+    ]);
+    expect(search(nested, { query: '', tag: 'programming/databases' })).toEqual(
+      [pushdown, fk],
+    );
+  });
+
+  test('branch counts roll up, one per item, and say what nests', () => {
+    expect(branchCounts(nested, null)).toEqual([
+      { name: 'programming', count: 4, nested: true },
+      { name: 'reinforcement-learning', count: 1, nested: false },
+    ]);
+    expect(branchCounts(nested, 'programming')).toEqual([
+      { name: 'programming/databases', count: 2, nested: true },
+      { name: 'programming/closures', count: 1, nested: false },
+    ]);
+  });
+
+  test('filtering a branch leaves the whole branch out of the other tags', () => {
+    expect(tagCounts(nested, 'programming')).toEqual([
+      { name: 'reinforcement-learning', count: 1 },
+    ]);
+  });
+
+  test('known tags include implied parents, busiest branches first', () => {
+    expect(knownTags(nested)).toEqual([
+      'programming',
+      'programming/databases',
+      'programming/closures',
+      'programming/databases/datafusion',
+      'reinforcement-learning',
+    ]);
+  });
+
+  test('items are related through a parent or a child tag', () => {
+    expect(related(ddd, nested, { limit: 5 })).toEqual([closure, pushdown, fk]);
+    expect(related(fk, nested, { limit: 5 })).toEqual([ddd, pushdown]);
   });
 });
 

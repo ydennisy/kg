@@ -1,16 +1,12 @@
 'use server';
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { refresh } from 'next/cache';
 
 import { requireUser } from '@/lib/auth';
-import { cards, cardTags, db, notes, noteTags, reviews, tags } from '@/lib/db';
-import {
-  domain,
-  draftProblem,
-  normalizeTag,
-  normalizeUrl,
-} from '@/lib/knowledge/draft';
+import { cards, cardTags, db, notes, noteTags, reviews } from '@/lib/db';
+import { domain, draftProblem, normalizeUrl } from '@/lib/knowledge/draft';
+import { moveTag, tagIds, type MoveResult } from '@/lib/knowledge/tag-store';
 import { itemKey, type ItemDraft, type ItemType } from '@/lib/knowledge/types';
 import { enrichLink } from '@/lib/links/enrich';
 import { normalizeMarkdown } from '@/lib/markdown';
@@ -20,23 +16,6 @@ const GRADES: Grade[] = ['again', 'hard', 'good', 'easy'];
 
 export type SaveResult =
   { ok: true; key: string } | { ok: false; error: string };
-
-/** Ids for these tag names, creating the ones that do not exist yet. */
-async function tagIds(userId: string, names: string[]): Promise<number[]> {
-  const wanted = [...new Set(names.map(normalizeTag).filter(Boolean))];
-  if (wanted.length === 0) {
-    return [];
-  }
-  await db
-    .insert(tags)
-    .values(wanted.map((name) => ({ name, userId })))
-    .onConflictDoNothing();
-  const rows = await db
-    .select({ id: tags.id })
-    .from(tags)
-    .where(and(eq(tags.userId, userId), inArray(tags.name, wanted)));
-  return rows.map((row) => row.id);
-}
 
 /**
  * Adds a card, note or link — or, with `editing`, changes one. A card's type
@@ -148,6 +127,16 @@ export async function saveItem(
 
   refresh();
   return { ok: true, key };
+}
+
+/** Renames or moves a tag with everything under it; see `moveTag`. */
+export async function renameTag(from: string, to: string): Promise<MoveResult> {
+  const user = await requireUser();
+  const result = await moveTag(user.id, from, to);
+  if (result.ok) {
+    refresh();
+  }
+  return result;
 }
 
 export async function deleteItem(type: ItemType, id: number) {

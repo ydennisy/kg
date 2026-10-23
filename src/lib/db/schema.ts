@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  type AnySQLiteColumn,
   index,
   integer,
   primaryKey,
@@ -121,18 +122,35 @@ export const notes = sqliteTable(
   (table) => [index('notes_user_idx').on(table.userId)],
 );
 
+/**
+ * Tags nest: `name` is one segment, and `parent_id` places it under another
+ * tag, so `programming/databases` is a `databases` row whose parent is
+ * `programming`. Renaming or moving a branch is a single-row update. Paths are
+ * only assembled when items are loaded (see `tagPaths`).
+ */
 export const tags = sqliteTable(
   'tags',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
     userId: owner(),
+    parentId: integer('parent_id').references((): AnySQLiteColumn => tags.id, {
+      onDelete: 'cascade',
+    }),
     name: text('name').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
   },
+  // SQLite treats NULLs as distinct in a unique index, so top-level tags need
+  // an index of their own to stay unique.
   (table) => [
-    uniqueIndex('tags_user_name_unique').on(table.userId, table.name),
+    uniqueIndex('tags_user_root_name_unique')
+      .on(table.userId, table.name)
+      .where(sql`${table.parentId} IS NULL`),
+    uniqueIndex('tags_user_parent_name_unique')
+      .on(table.userId, table.parentId, table.name)
+      .where(sql`${table.parentId} IS NOT NULL`),
+    index('tags_parent_id_idx').on(table.parentId),
   ],
 );
 

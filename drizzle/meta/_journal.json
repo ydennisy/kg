@@ -15,6 +15,13 @@
       "when": 1792351836928,
       "tag": "0001_add_link_enrichment",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792768285407,
+      "tag": "0002_add_tag_parents",
+      "breakpoints": true
     }
   ]
 }

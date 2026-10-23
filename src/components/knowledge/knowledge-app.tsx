@@ -4,23 +4,35 @@ import {
   IconBrain,
   IconFileText,
   IconLogout,
+  IconPencil,
   IconPlayerPlay,
   IconPlus,
   IconSearch,
   IconX,
 } from '@tabler/icons-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import { Button } from 'twenty-ui';
 
+import { renameTag } from '@/app/actions';
 import { signOut } from '@/app/sign-in/actions';
 import { domain, draftFrom, guessType } from '@/lib/knowledge/draft';
 import { startDrill, type Drill as DrillState } from '@/lib/knowledge/drill';
 import {
+  branchCounts,
   countByType,
+  knownTags,
   newestFirst,
   search,
   tagCounts,
 } from '@/lib/knowledge/search';
+import { parentOf, SEPARATOR } from '@/lib/knowledge/tags';
 import type { Item, ItemDraft, ItemType } from '@/lib/knowledge/types';
 
 import { Highlighted, TagChip, TYPES, TypeIcon } from './bits';
@@ -80,8 +92,13 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
   const results =
     type === 'all' ? matches : matches.filter((item) => item.type === type);
   const counts = countByType(matches);
-  const allTags = useMemo(() => tagCounts(items), [items]);
-  const resultTags = tagCounts(matches, tag).slice(0, 4);
+  const topTags = useMemo(() => branchCounts(items, null), [items]);
+  const allTags = useMemo(() => knownTags(items), [items]);
+  // Inside a tag, offer the tags nested in it; otherwise, where results sit.
+  const narrowTags = tag ? branchCounts(matches, tag) : [];
+  const resultTags = narrowTags.length
+    ? []
+    : tagCounts(matches, tag).slice(0, 4);
   const recent = useMemo(() => newestFirst(items).slice(0, 5), [items]);
   const dueCards = useMemo(
     () => newestFirst(items).filter((item) => item.type === 'card' && item.due),
@@ -199,7 +216,8 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
       setTag(null);
       setType('all');
     } else if (event.key === 'Backspace' && !query && tag) {
-      setTag(null);
+      // Widen one level at a time before letting go of the tag.
+      setTag(parentOf(tag));
     }
   }
 
@@ -293,28 +311,22 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
         >
           <IconSearch size={18} stroke={1.6} className="flex-none" />
           {tag && (
-            <span
-              className="flex h-[26px] flex-none items-center gap-1 rounded-md pr-1.5 pl-2.5"
-              style={{
-                background: 'var(--t-background-tertiary)',
-                color: 'var(--t-font-color-primary)',
-                fontSize: 'var(--t-font-size-sm)',
+            <TagCrumb
+              key={tag}
+              tag={tag}
+              onWiden={(path) => {
+                setTag(path);
+                focusSearch();
               }}
-            >
-              #{tag}
-              <button
-                type="button"
-                aria-label="Clear tag"
-                className="flex"
-                style={{ color: 'var(--t-font-color-tertiary)' }}
-                onClick={() => {
-                  setTag(null);
-                  focusSearch();
-                }}
-              >
-                <IconX size={12} />
-              </button>
-            </span>
+              onClear={() => {
+                setTag(null);
+                focusSearch();
+              }}
+              onRenamed={(path) => {
+                setTag(path);
+                focusSearch();
+              }}
+            />
           )}
           <input
             ref={input}
@@ -376,11 +388,12 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
             aria-hidden={searching}
           >
             <div className="flex max-w-[560px] flex-wrap justify-center gap-1.5">
-              {allTags.map(({ name, count }) => (
+              {topTags.map(({ name, count, nested }) => (
                 <TagChip
                   key={name}
                   name={name}
                   count={count}
+                  nested={nested}
                   onPick={pickTag}
                 />
               ))}
@@ -473,6 +486,27 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
                   </button>
                 );
               })}
+              {narrowTags.length > 0 && (
+                <>
+                  <span
+                    className="ml-3"
+                    style={{ color: 'var(--t-font-color-tertiary)' }}
+                  >
+                    narrow
+                  </span>
+                  {narrowTags.map(({ name, count, nested }) => (
+                    <TagChip
+                      key={name}
+                      name={name}
+                      count={count}
+                      nested={nested}
+                      short
+                      variant="outline"
+                      onPick={pickTag}
+                    />
+                  ))}
+                </>
+              )}
               {resultTags.length > 0 && (
                 <>
                   <span
@@ -600,7 +634,7 @@ export function KnowledgeApp({ items }: { items: Item[] }) {
           key={composer.id}
           initial={composer.initial}
           editing={composer.editing}
-          knownTags={allTags.map(({ name }) => name)}
+          knownTags={allTags}
           onClose={closeComposer}
           onSaved={closeComposer}
         />
@@ -665,11 +699,15 @@ function ResultCard({
         <Highlighted text={item.title} query={query} />
       </div>
       {item.type !== 'card' && item.body && (
-        <div
-          className="line-clamp-5 px-3.5 pb-3 leading-[1.6]"
-          style={{ color: 'var(--t-font-color-secondary)' }}
-        >
-          <Highlighted text={item.body} query={query} />
+        // The clamp hides overflow inside its own padding box, so the gap
+        // below it lives on a wrapper or a sixth line shows through it.
+        <div className="px-3.5 pb-3">
+          <div
+            className="line-clamp-5 leading-[1.6]"
+            style={{ color: 'var(--t-font-color-secondary)' }}
+          >
+            <Highlighted text={item.body} query={query} />
+          </div>
         </div>
       )}
       {item.tags.length > 0 && (
@@ -680,5 +718,144 @@ function ResultCard({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The tag being filtered, as a breadcrumb: each parent widens the filter to
+ * itself. The pencil renames or moves the tag, everything under it included.
+ */
+function TagCrumb({
+  tag,
+  onWiden,
+  onClear,
+  onRenamed,
+}: {
+  tag: string;
+  onWiden: (path: string) => void;
+  onClear: () => void;
+  onRenamed: (path: string) => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+  const parts = tag.split(SEPARATOR);
+  const chip =
+    'flex h-[26px] flex-none items-center rounded-md px-1 text-[length:var(--t-font-size-sm)]';
+  const surface = {
+    background: 'var(--t-background-tertiary)',
+    color: 'var(--t-font-color-primary)',
+  };
+  const quiet = { color: 'var(--t-font-color-tertiary)' };
+
+  if (editing !== null) {
+    const cancel = () => {
+      setEditing(null);
+      setError(null);
+    };
+    const save = () =>
+      startSaving(async () => {
+        const result = await renameTag(tag, editing);
+        if (result.ok) {
+          onRenamed(result.path);
+        } else {
+          setError(result.error);
+        }
+      });
+    return (
+      <span className={`${chip} gap-1.5 pl-2`} style={surface}>
+        <span style={quiet}>#</span>
+        <input
+          autoFocus
+          value={editing}
+          disabled={saving}
+          aria-label="Rename or move tag"
+          title="Rename it, or use / to move it under another tag"
+          onChange={(event) => {
+            setEditing(event.target.value);
+            setError(null);
+          }}
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              save();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              cancel();
+            }
+          }}
+          onBlur={() => !saving && cancel()}
+          className="min-w-0 border-none bg-transparent outline-none"
+          style={{
+            width: `${Math.max(editing.length, 8) + 1}ch`,
+            maxWidth: 320,
+          }}
+        />
+        <span
+          className="pr-1.5 whitespace-nowrap"
+          style={{
+            fontSize: 'var(--t-font-size-xs)',
+            color: error
+              ? 'var(--t-font-color-danger)'
+              : 'var(--t-font-color-tertiary)',
+          }}
+        >
+          {error ?? (saving ? 'Saving…' : '↵ rename · / to move')}
+        </span>
+      </span>
+    );
+  }
+
+  return (
+    <span className={chip} style={surface}>
+      <span className="pl-1" style={quiet}>
+        #
+      </span>
+      {parts.map((part, index) => {
+        const path = parts.slice(0, index + 1).join(SEPARATOR);
+        return (
+          <span key={path} className="flex items-center">
+            {index > 0 && (
+              <span style={{ color: 'var(--t-font-color-light)' }}>
+                {SEPARATOR}
+              </span>
+            )}
+            {index === parts.length - 1 ? (
+              <span className="px-1">{part}</span>
+            ) : (
+              <button
+                type="button"
+                title={`Widen to #${path}`}
+                onClick={() => onWiden(path)}
+                className="rounded px-1 hover:underline hover:underline-offset-2"
+                style={quiet}
+              >
+                {part}
+              </button>
+            )}
+          </span>
+        );
+      })}
+      <button
+        type="button"
+        aria-label="Rename or move tag"
+        title="Rename or move tag"
+        className="flex rounded p-0.5"
+        style={quiet}
+        onClick={() => setEditing(tag)}
+      >
+        <IconPencil size={12} />
+      </button>
+      <button
+        type="button"
+        aria-label="Clear tag"
+        className="flex rounded p-0.5"
+        style={quiet}
+        onClick={onClear}
+      >
+        <IconX size={12} />
+      </button>
+    </span>
   );
 }
